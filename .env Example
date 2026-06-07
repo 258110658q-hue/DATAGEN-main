@@ -1,0 +1,43 @@
+# Your data storage path(required)
+WORKING_DIRECTORY = ./data/
+
+# Configuration directory path (optional)
+# All config files (agent_models.yaml, agents/, mcp.yaml) are relative to this directory.
+# Default is config/
+# Use 'config_local' for local development to avoid Git tracking (already in .gitignore)
+CONFIG_DIRECTORY = config
+
+# Conda environment name (optional - leave empty or set to "none" to skip conda)
+# The project will auto-detect conda availability. If conda is not installed,
+# Python code execution will run directly with the system Python.
+CONDA_ENV = datagen
+
+# ChromeDriver executable path (optional)
+# webdriver-manager can auto-detect and download the correct ChromeDriver version.
+# Set this only if you prefer a fixed path.
+CHROMEDRIVER_PATH = ./chromedriver-linux64/chromedriver
+
+# Firecrawl API key (optional)
+# Note: If this key is missing, query capabilities may be reduced
+FIRECRAWL_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# === LLM API Keys (at least one required) ===
+# For DeepSeek: fill OPENAI_API_KEY with your DeepSeek key
+#   (DeepSeek uses OpenAI-compatible API format)
+OPENAI_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Anthropic API key (optional)
+ANTHROPIC_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# Google API key (optional)
+GOOGLE_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# LangChain API key (optional)
+# Used for monitoring the processing
+LANGCHAIN_TRACING_V2 = true
+LANGCHAIN_PROJECT = "Multi-agent-DataAnalysis"
+LANGCHAIN_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# MCP (Model Context Protocol) Settings (optional)
+# Tavily API key for web-search MCP server
+TAVILY_API_KEY = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# GitHub token for github MCP server
+GITHUB_TOKEN = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

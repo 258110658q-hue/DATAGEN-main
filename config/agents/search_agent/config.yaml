@@ -1,0 +1,12 @@
+# Search Agent Configuration
+
+mcp_servers: []
+
+skills: []
+tools:
+  - collect_data
+  - read_document
+  - wikipedia
+  - list_directory
+
+rules: _shared/rules.md

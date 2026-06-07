@@ -1,0 +1,11 @@
+# Report Agent Configuration
+
+mcp_servers: []
+
+skills: []
+tools:
+  - create_document
+  - read_document
+  - edit_document
+  - list_directory
+rules: _shared/rules.md

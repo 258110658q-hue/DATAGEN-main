@@ -1,0 +1,11 @@
+# Hypothesis Agent Configuration
+
+mcp_servers: []
+
+skills: []
+tools:
+  - collect_data
+  - list_directory
+
+rules: _shared/rules.md
+mcp_servers: []

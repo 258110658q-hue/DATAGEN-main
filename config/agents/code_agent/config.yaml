@@ -1,0 +1,11 @@
+# Code Agent Configuration
+
+mcp_servers: []
+
+skills: []
+tools:
+  - read_document
+  - execute_code
+  - execute_command
+  - list_directory
+rules: _shared/rules.md

@@ -1,0 +1,64 @@
+agents:
+  hypothesis_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  process_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  visualization_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  code_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 20
+  search_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  report_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  quality_review_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  note_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
+  refiner_agent:
+    provider: deepseek
+    model_config:
+      model: deepseek-chat
+      temperature: 1.0
+      base_url: https://api.deepseek.com
+    max_iterations: 15
