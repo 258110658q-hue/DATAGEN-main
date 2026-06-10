@@ -3,9 +3,5 @@
 mcp_servers: []
 
 skills: []
-tools:
-  - create_document
-  - read_document
-  - edit_document
-  - list_directory
+tools: []
 rules: _shared/rules.md

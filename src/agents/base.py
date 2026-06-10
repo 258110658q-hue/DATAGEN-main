@@ -113,13 +113,25 @@ class BaseAgent(ABC):
         """
         tools: list[Any] = []
         
+        # 检查是否在 config.yaml 中显式配置了 tools（即使是空列表也算）
+        loader = self.get_config_loader()
+        metadata = loader.load_metadata(self.agent_name)
+        tools_configured = metadata.tools is not None and len(metadata.tools) >= 0
+
         # Load from external config first
         config_tools = self._load_tools_from_config()
-        if config_tools:
+        if tools_configured:
+            # 显式配置了 tools（包括空列表），使用配置值，不回退到硬编码
+            if config_tools:
+                tools.extend(config_tools)
+                logger.info(f"从 config 加载 {len(config_tools)} 个工具: {self.agent_name}")
+            else:
+                logger.info(f"Agent {self.agent_name} 显式配置了空工具列表（纯文本模式）")
+        elif config_tools:
             tools.extend(config_tools)
             logger.info(f"Loaded {len(config_tools)} tools from config for {self.agent_name}")
         else:
-            # Fallback to hardcoded tools
+            # 未配置 tools → 回退到硬编码工具
             hardcoded_tools = self._get_tools()
             if hardcoded_tools:
                 tools.extend(hardcoded_tools)

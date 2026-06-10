@@ -10,6 +10,13 @@ import shutil
 import time
 from datetime import datetime
 
+# 修复 Windows GBK 编码问题
+for _stream_name in ('stdout', 'stderr'):
+    try:
+        getattr(sys, _stream_name).reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 os.environ["USER_AGENT"] = "DATAGEN-Streamlit/1.0"
@@ -120,9 +127,13 @@ if run_button:
         run_dir = os.path.join(data_dir, f"run_{timestamp}")
         os.makedirs(run_dir, exist_ok=True)
 
-        # 复制输入 CSV 到运行目录
+        # 复制输入 CSV 到运行目录（两个位置，兼容 Agent 的不同路径写法）
         for cf in csv_files:
             shutil.copy2(os.path.join(data_dir, cf), os.path.join(run_dir, cf))
+            # 同时在 run_dir/data/ 下创建副本，兼容 Agent 使用 data/xxx.csv 路径
+            run_data_subdir = os.path.join(run_dir, "data")
+            os.makedirs(run_data_subdir, exist_ok=True)
+            shutil.copy2(os.path.join(data_dir, cf), os.path.join(run_data_subdir, cf))
 
         # 设置本次运行的工作目录
         import src.config as cfg

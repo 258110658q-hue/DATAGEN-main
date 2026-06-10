@@ -89,10 +89,13 @@ def execute_code(
         if os.path.isabs(codefile_name):
             code_file_path = codefile_name
         else:
-            if WORKING_DIRECTORY not in codefile_name:
-                code_file_path = os.path.join(WORKING_DIRECTORY, codefile_name)
-            else:
-                code_file_path = codefile_name
+            # 如果 codefile_name 以 data/ 开头且 WORKING_DIRECTORY 本来就指向 data/ 目录，
+            # 去掉重复的 data/ 前缀，防止拼接出 data/data/xxx 的路径
+            clean_name = codefile_name.replace("\\", "/")
+            wd_clean = WORKING_DIRECTORY.replace("\\", "/").rstrip("/")
+            if clean_name.startswith("data/") and wd_clean.endswith("/data"):
+                clean_name = clean_name[5:]  # 去掉 "data/" 前缀
+            code_file_path = os.path.join(WORKING_DIRECTORY, clean_name)
 
         # 针对当前平台规范化路径
         code_file_path = os.path.normpath(code_file_path)
@@ -105,8 +108,9 @@ def execute_code(
 
         logger.info(f"代码已写入文件: {code_file_path}")
 
-        # 获取平台相关的命令
-        python_cmd = f"python {codefile_name}"
+        # 获取平台相关的命令（使用完整路径引用脚本文件）
+        # 设置 PYTHONIOENCODING=utf-8 防止脚本中的 emoji/中文在 GBK 下崩溃
+        python_cmd = f'python -X utf8 "{code_file_path}"'
         full_command, shell, executable = get_platform_specific_command(python_cmd)
 
         logger.info(f"正在执行命令: {full_command}")
@@ -185,6 +189,8 @@ def execute_command(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             executable=executable,
             cwd=WORKING_DIRECTORY
         )

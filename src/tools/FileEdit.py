@@ -19,6 +19,7 @@ if not os.path.exists(WORKING_DIRECTORY):
 def normalize_path(file_path: str) -> str:
     """
     规范化文件路径以实现跨平台兼容。
+    会尝试多种路径组合，确保在 run_dir 等不同工作目录下都能找到文件。
 
     Args:
     file_path (str): 要规范化的文件路径
@@ -33,8 +34,25 @@ def normalize_path(file_path: str) -> str:
     if clean_path.startswith(wd_clean.lstrip("./") + "/"):
         clean_path = clean_path[len(wd_clean.lstrip("./")) + 1:]
 
-    normalized = os.path.normpath(os.path.join(WORKING_DIRECTORY, clean_path))
-    return normalized
+    # 首选：WORKING_DIRECTORY + clean_path
+    primary = os.path.normpath(os.path.join(WORKING_DIRECTORY, clean_path))
+    if os.path.exists(primary):
+        return primary
+
+    # 备选1：如果 clean_path 包含 data/ 前缀，尝试去掉它（文件可能直接在 WORKING_DIRECTORY 下）
+    if clean_path.startswith("data/"):
+        fallback = os.path.normpath(os.path.join(WORKING_DIRECTORY, clean_path[5:]))
+        if os.path.exists(fallback):
+            return fallback
+
+    # 备选2：尝试仅用文件名在 WORKING_DIRECTORY 下查找
+    basename = os.path.basename(clean_path)
+    fallback2 = os.path.normpath(os.path.join(WORKING_DIRECTORY, basename))
+    if os.path.exists(fallback2):
+        return fallback2
+
+    # 都不存在，返回首选路径（让后续报 FileNotFoundError）
+    return primary
 
 @tool
 def collect_data(

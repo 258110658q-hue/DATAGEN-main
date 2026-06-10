@@ -1,5 +1,20 @@
 import logging
 import sys
+import io
+
+class _SafeStream(io.TextIOWrapper):
+    """包装流，将无法编码的字符替换为 ?，防止 GBK 崩溃。"""
+    def __init__(self, stream):
+        self._stream = stream
+    def write(self, data):
+        try:
+            self._stream.write(data)
+        except UnicodeEncodeError:
+            self._stream.write(data.encode(self._stream.encoding or 'utf-8', errors='replace').decode(self._stream.encoding or 'utf-8', errors='replace'))
+    def flush(self):
+        self._stream.flush()
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
 
 class SilenceFilter(logging.Filter):
     """过滤掉不需要在控制台中显示的噪音消息。"""
@@ -45,8 +60,13 @@ def setup_logger(log_file:str='agent.log'):
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    # 控制台 handler（过滤后的进度信息）
-    console_handler = logging.StreamHandler(sys.stdout)
+    # 控制台 handler（使用容错流，避免 GBK 编码崩溃）
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+    safe_stream = _SafeStream(sys.stdout)
+    console_handler = logging.StreamHandler(safe_stream)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 

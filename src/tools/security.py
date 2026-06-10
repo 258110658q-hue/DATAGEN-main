@@ -220,6 +220,8 @@ class ResourceLimiter:
                 executable=executable,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 preexec_fn=preexec_fn,
             )
             return self._truncate_output(result)
@@ -233,6 +235,8 @@ class ResourceLimiter:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             preexec_fn=preexec_fn,
         )
 
