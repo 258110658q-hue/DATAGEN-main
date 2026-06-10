@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .state import State
     from ..agents.base import BaseAgent
 
-# Set up logger
+# 设置日志记录器
 logger = logging.getLogger(__name__)
 
 def get_state_attr(state: State | dict[str, Any], key: str, default: Any = None) -> Any:
@@ -74,7 +74,7 @@ def extract_json_from_text(text: str) -> dict[str, Any] | None:
         except json.JSONDecodeError:
             pass
 
-    # Try finding the first '{' and last '}'
+    # 尝试找到第一个 '{' 和最后一个 '}'
     start_idx = text.find('{')
     end_idx = text.rfind('}')
     if start_idx != -1 and end_idx != -1:
@@ -87,15 +87,15 @@ def extract_json_from_text(text: str) -> dict[str, Any] | None:
 
 def get_structured_output(result: Any, agent: BaseAgent) -> Any:
     """从智能代理的运行结果中提取结构化输出，并启用备用解析方案."""
-    # 1. Direct structured response in result dict
+    # 1. result 字典中的直接结构化响应
     if isinstance(result, dict) and "structured_response" in result:
         return result["structured_response"]
 
-    # 2. Result itself might be the structured object (Pydantic)
+    # 2. result 本身可能就是结构化对象（Pydantic）
     if hasattr(result, "dict") or hasattr(result, "model_dump"):
         return result
 
-    # 3. Last message content might be a JSON string
+    # 3. 最后一条消息内容可能是一个 JSON 字符串
     content = ""
     if isinstance(result, dict) and "messages" in result and result["messages"]:
         content = result["messages"][-1].content
@@ -110,7 +110,7 @@ def get_structured_output(result: Any, agent: BaseAgent) -> Any:
             return parsed
 
     return None
-        # 4. Fallback to last message content
+        # 4. 回退到最后一条消息内容
         #调用Agent之后result格式是不确定的，这个函数用来捞出结构化数据
 
 def agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
@@ -137,7 +137,7 @@ def agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
                 output = str(result)
                 ai_message = AIMessage(content=output, name=name)
 
-        # Base Updates
+        # 基础更新
         current_messages = list(get_state_attr(state, "messages", []))
         updates = {
             "messages": current_messages + [ai_message],
@@ -145,17 +145,17 @@ def agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
         }
         #每条agent执行之后，把新消息加到消息历史中
         #记录上一个agent是什么
-        # StateUpdater Protocol
+        # StateUpdater 协议
         if hasattr(agent, "get_state_updates"):
             agent_updates = agent.get_state_updates(state, output)
             if agent_updates:
                 updates.update(agent_updates)
         # StateUpdater协议（agent 自主决定更新什么）
-        # Increment workflow step counter
+        # 递增工作流步骤计数器
         current_step = get_state_attr(state, "step_count", 0)
         updates["step_count"] = current_step + 1
         #每执行一次，步骤+1
-        # Track completed tasks for workflow progress monitoring
+        # 跟踪已完成的任务，用于工作流进度监控
         current_instruction = get_state_attr(state, "current_instruction", None)
         if current_instruction:
             completed = list(get_state_attr(state, "completed_tasks", []))
@@ -173,36 +173,62 @@ def agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
             "last_active_agent": name
         }
         #ai执行出错时，不把工作流崩溃而是变成AImessage塞进历史，下次就可以看见某某agent出错了
+
+def _is_non_interactive() -> bool:
+    """检测是否应跳过人工交互，自动继续执行。"""
+    import os as _os
+    return _os.getenv("AUTO_MODE", "").lower() in ("1", "true", "yes")
+
+def _last_agent_errored(state: State) -> bool:
+    """检测上一个 Agent 的消息中是否包含错误。"""
+    messages = get_state_attr(state, "messages", [])
+    if messages:
+        last_msg = messages[-1]
+        content = getattr(last_msg, "content", "") or ""
+        return "Error:" in str(content) or "GraphRecursionError" in str(content)
+    return False
+
 def human_choice_node(state: State) -> dict[str, Any]:
     """处理人工输入并选择下一步操作"""
+    current_messages = list(get_state_attr(state, "messages", []))
+
+    # 非交互模式下自动继续，或上一个 Agent 出错时自动继续
+    if _is_non_interactive() or _last_agent_errored(state):
+        reason = "自动模式" if _is_non_interactive() else "上一 Agent 出错"
+        print(f"[自动] 跳过人工选择（{reason}）...")
+        return {
+            "messages": current_messages + [HumanMessage(content="继续执行研究流程")],
+            "last_active_agent": "human",
+            "current_instruction": "继续执行研究流程"
+        }
+
     print("请选择下一步：")
     print("1. 重新生成假设")
     print("2. 继续开展研究工作")
 
     while True:
-        choice = input("请输入你的选择(1 or 2): ")
+        choice = input("请输入你的选择（1 或 2）：")
         if choice in ["1", "2"]:
             break
-        print("输入无效，请重新尝试.")
+        print("输入无效，请重新输入。")
 
-    current_messages = list(get_state_attr(state, "messages", []))
     updates = {
         "messages": current_messages,
         "last_active_agent": "human"
     }
 
     if choice == "1":
-        modification_areas = input("Specify areas to modify: ")
-        updates["messages"] = current_messages + [HumanMessage(content=f"Regenerate hypothesis. Areas: {modification_areas}")]
-        updates["hypothesis"] = None  # Clear hypothesis
+        modification_areas = input("请输入需要修改的内容：")
+        updates["messages"] = current_messages + [HumanMessage(content=f"重新生成假设。修改内容：{modification_areas}")]
+        updates["hypothesis"] = None
     else:
-        updates["messages"] = current_messages + [HumanMessage(content="Continue the research process")]
-        updates["current_instruction"] = "Continue the research process"
+        updates["messages"] = current_messages + [HumanMessage(content="继续执行研究流程")]
+        updates["current_instruction"] = "继续执行研究流程"
 
     return updates
 
 def create_message(message: Any, name: str) -> BaseMessage:
-    """Create a BaseMessage object based on the message type."""
+    """根据消息类型创建 BaseMessage 对象。"""
     if isinstance(message, dict):
         content = message.get("content", "")
         message_type = str(message.get("type", "ai")).lower()
@@ -213,12 +239,12 @@ def create_message(message: Any, name: str) -> BaseMessage:
     return HumanMessage(content=content) if message_type == "human" else AIMessage(content=content, name=name)
 
 def note_agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
-    """Process the note agent's action and update the entire state."""
+    """处理 note agent 的动作并更新整个状态。"""
     logger.info(f"Processing note agent: {name}")
     try:
         current_messages = list(get_state_attr(state, "messages", []))
 
-        # Context window management
+        # 上下文窗口管理
         head_messages: list[BaseMessage] = []
         tail_messages: list[BaseMessage] = []
         processing_messages = current_messages
@@ -229,9 +255,9 @@ def note_agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]
             # 为智能体创建包含精简消息的本地化状态
             # 注：如果智能体要求传入字典类对象，则需传入该类对象
             processing_messages = list(current_messages[2:-2])
-            logger.debug("Trimmed messages for processing")
+            logger.debug("已裁剪消息用于处理")
 
-        # 准备调用状态（如需兼容可转换为字典格式）
+        # 准备调用状态（如需兼容 Pydantic 模型，可转换为字典格式）
         invoke_state = state.dict() if hasattr(state, "dict") else dict(state)
         invoke_state["messages"] = processing_messages
 
@@ -240,7 +266,7 @@ def note_agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]
 
         if not output:
             logger.error(f"Note agent {name} failed to return structured response. Result: {str(result)[:500]}")
-            # Try to use raw message if available
+            # 尝试使用原始消息（如果可用）
             raw_content = ""
             if isinstance(result, dict) and "messages" in result and result["messages"]:
                 raw_content = result["messages"][-1].content
@@ -249,8 +275,9 @@ def note_agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]
 
             return _create_error_state(state, AIMessage(content=f"Error: Agent {name} failed to return structured response. Raw: {raw_content[:200]}", name=name), name, "Missing structured response")
 
-        # Map NoteState output fields to New State Schema
-        # Use helper for safe attribute access
+        # 将 NoteState 输出字段映射到新的 State 模式
+        # 使用辅助函数进行安全的属性访问
+        # 安全地从对象或字典中获取属性值
         def safe_get(obj, key, default=""):
             if isinstance(obj, dict):
                 return obj.get(key, default)
@@ -265,11 +292,11 @@ def note_agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]
             "messages": combined_messages,
             "hypothesis": str(safe_get(output, "hypothesis", "")),
 
-            # Semantic Mapping
+            # 语义映射
             "current_instruction": str(safe_get(output, "current_instruction", safe_get(output, "process", ""))),
             "next_workflow_step": str(safe_get(output, "next_workflow_step", safe_get(output, "process_decision", ""))),
 
-            # Artifact Mapping
+            # 工件映射
             "search_artifacts": update_artifact_dict({}, str(safe_get(output, "search_artifacts", safe_get(output, "searcher_state", "")))),
             "data_viz_artifacts": update_artifact_dict({}, str(safe_get(output, "data_viz_artifacts", safe_get(output, "visualization_state", "")))),
             "code_artifacts": update_artifact_dict({}, str(safe_get(output, "code_artifacts", safe_get(output, "code_state", "")))),
@@ -300,14 +327,23 @@ def _create_error_state(state: State, error_message: AIMessage, name: str, error
     return current_dict
 
 def human_review_node(state: State) -> dict[str, Any]:
-    """展示当前状态并处理用户交互."""
+    """展示当前状态并处理用户交互。"""
     try:
-        print("Current research progress:")
+        # 非交互模式下自动结束
+        if _is_non_interactive():
+            print("[自动] 非交互模式，自动结束研究流程...")
+            return {
+                "last_active_agent": "human",
+                "needs_revision": False,
+                "revision_count": 0
+            }
+
+        print("当前研究进度：")
         print(state)
-        print("\n你是否需要进一步分析或修改?")
+        print("\n你是否需要进一步分析或修改？")
 
         while True:
-            user_input = input("输入 “yes” 继续分析，或输入 “no” 结束研究： ").lower()
+            user_input = input("输入 yes 继续分析，或输入 no 结束：").lower()
             if user_input in ['yes', 'no']:
                 break
 
@@ -315,7 +351,7 @@ def human_review_node(state: State) -> dict[str, Any]:
 
         if user_input == 'yes':
             while True:
-                req = input("请输入你的请求: ").strip()
+                req = input("请输入你的请求：").strip()
                 if req:
                     updates["messages"] = [HumanMessage(content=req)]
                     updates["needs_revision"] = True
@@ -327,17 +363,17 @@ def human_review_node(state: State) -> dict[str, Any]:
         return updates
 
     except Exception as e:
-        logger.error(f"人工审核出现错误: {str(e)}", exc_info=True)
+        logger.error(f"人工审核出错：{str(e)}", exc_info=True)
         current_messages = list(get_state_attr(state, "messages", []))
         return {"messages": current_messages + [AIMessage(content=f"Error: {str(e)}", name="human_review")]}
 
 def refiner_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
-    """使用refiner代理处理报告材料."""
+    """使用 refiner agent 处理报告材料。"""
     try:
         storage_path = Path(WORKING_DIRECTORY)
         materials = []
 
-        # 收集资料（简易版）
+        # 收集材料（从工作目录读取所有 .md 文件）
         for fpath in storage_path.glob("*.md"):
              with open(fpath, "r", encoding="utf-8") as f:
                 materials.append(f"MD file '{fpath.name}':\n{f.read()}")
@@ -345,8 +381,8 @@ def refiner_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
         combined_materials = "\n\n".join(materials)
         report_content = f"Report materials:\n{combined_materials}"
 
-        # 创建优化器状态封装器
-        # 如果优化器要求使用特定键值，我们可能需要构建规范的输入内容。
+        # 创建 refiner agent 的状态封装器
+        # 如果 agent 要求使用特定键值，我们可能需要构建规范的输入内容。
         refiner_input = state.dict() if hasattr(state, "dict") else dict(state)
         refiner_input["messages"] = [HumanMessage(content=report_content)]
 

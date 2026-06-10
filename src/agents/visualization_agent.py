@@ -12,16 +12,16 @@ if TYPE_CHECKING:
     from ..core.state import State
 
 class VisualizationAgent(BaseAgent):
-    """Agent responsible for creating data visualizations."""
+    """负责创建数据可视化的 Agent。"""
 
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
-        Initialize the VisualizationAgent.
+        初始化 VisualizationAgent。
 
         Args:
-            language_model_manager: Manager for language model configuration.
-            team_members: List of team member roles for collaboration.
-            working_directory: The directory where the agent's data will be stored.
+            language_model_manager: 语言模型配置的管理器。
+            team_members: 用于协作的团队成员角色列表。
+            working_directory: Agent 数据存储的目录。
         """
         super().__init__(
             agent_name="visualization_agent",
@@ -32,11 +32,11 @@ class VisualizationAgent(BaseAgent):
         self.response_format = ArtifactSchema
 
     def _get_tools(self) -> List:
-        """Get the list of tools for data visualization."""
+        """获取数据可视化所用的工具列表。"""
         return [read_document, execute_code, execute_command, list_directory]
 
     def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
-        """Return state updates for visualization artifacts."""
+        """返回可视化产物的状态更新。"""
         def safe_get(obj, key, default=None):
             if isinstance(obj, dict):
                 return obj.get(key, default)

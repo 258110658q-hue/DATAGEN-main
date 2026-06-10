@@ -15,16 +15,16 @@ if TYPE_CHECKING:
     from ..core.state import State
 
 class HypothesisAgent(BaseAgent):
-    """Agent responsible for generating research hypotheses."""
+    """负责生成研究假设的 Agent。"""
 
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
-        Initialize the HypothesisAgent.
+        初始化 HypothesisAgent。
 
         Args:
-            language_model_manager: Manager for language model configuration.
-            team_members: List of team member roles for collaboration.
-            working_directory: The directory where the agent's data will be stored.
+            language_model_manager: 语言模型配置管理器。
+            team_members: 协作用户角色列表。
+            working_directory: Agent 数据存储目录。
         """
         super().__init__(
             agent_name="hypothesis_agent",
@@ -34,7 +34,7 @@ class HypothesisAgent(BaseAgent):
         )
 
     def _get_tools(self) -> List:
-        """Get the list of tools for hypothesis generation."""
+        """获取用于假设生成的工具列表。"""
         api_wrapper = WikipediaAPIWrapper(wiki_client=None)
         wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)
         base_tools = [
@@ -48,16 +48,16 @@ class HypothesisAgent(BaseAgent):
         return base_tools
 
     def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
-        """Return state updates for hypothesis generation output.
-        
+        """返回假设生成输出的状态更新。
+
         Args:
-            state: The current workflow state.
-            output: The agent's output (hypothesis content).
-            
+            state: 当前工作流状态。
+            output: Agent 的输出（假设内容）。
+
         Returns:
-            Dict with 'hypothesis' field update.
+            包含 'hypothesis' 字段更新的字典。
         """
-        # Extract hypothesis text, ensuring string serialization
+        # 提取假设文本，确保字符串序列化
         if isinstance(output, str):
             hypothesis_text = output
         elif hasattr(output, "hypothesis"):
@@ -66,5 +66,5 @@ class HypothesisAgent(BaseAgent):
             hypothesis_text = str(output.content)
         else:
             hypothesis_text = str(output)
-        
+
         return {"hypothesis": hypothesis_text}

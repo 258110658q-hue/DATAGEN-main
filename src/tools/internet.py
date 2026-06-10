@@ -8,47 +8,47 @@ from bs4 import BeautifulSoup
 
 from ..logger import setup_logger
 from ..config import FIRECRAWL_API_KEY, CHROMEDRIVER_PATH
-# Set up logger
+# 设置日志记录器
 logger = setup_logger()
 
 
 def _get_chrome_service() -> Service:
-    """Get ChromeDriver service, auto-managing the driver version."""
+    """获取 ChromeDriver 服务，自动管理驱动版本。"""
     try:
         from webdriver_manager.chrome import ChromeDriverManager
         driver_path = ChromeDriverManager().install()
-        logger.info(f"ChromeDriver auto-managed at: {driver_path}")
+        logger.info(f"ChromeDriver 自动管理路径: {driver_path}")
         return Service(driver_path)
     except Exception as e:
-        logger.warning(f"webdriver-manager failed ({e}), falling back to CHROMEDRIVER_PATH")
+        logger.warning(f"webdriver-manager 失败 ({e})，回退到 CHROMEDRIVER_PATH")
         return Service(CHROMEDRIVER_PATH)
 
 
 @tool
-def google_search(query: Annotated[str, "The search query to use"]) -> Annotated[str, "The top 5 Google search results."]:
+def google_search(query: Annotated[str, "要使用的搜索查询"]) -> Annotated[str, "前 5 条 Google 搜索结果。"]:
     """
-    Perform a Google search based on the given query and return the top 5 results.
+    根据给定的查询执行 Google 搜索，并返回前 5 条结果。
 
-    This function uses Selenium to perform a headless Google search and BeautifulSoup to parse the results.
+    此函数使用 Selenium 执行无头 Google 搜索，并使用 BeautifulSoup 解析结果。
 
     """
     try:
-        logger.info(f"Performing Google search for query: {query}")
+        logger.info(f"正在对查询执行 Google 搜索: {query}")
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
 
         with webdriver.Chrome(options=chrome_options, service=_get_chrome_service()) as driver:
-            # Set a timeout to prevent hanging on slow network
+            # 设置超时时间，防止慢网络时挂起
             driver.set_page_load_timeout(30)
             url = f"https://www.google.com/search?q={query}"
-            logger.debug(f"Accessing URL: {url}")
+            logger.debug(f"正在访问 URL: {url}")
             driver.get(url)
             html = driver.page_source
 
         soup = BeautifulSoup(html, 'html.parser')
-        search_results = soup.select('.g') 
+        search_results = soup.select('.g')
         search = ""
         for result in search_results[:5]:
             title_element = result.select_one('h3')
@@ -59,41 +59,41 @@ def google_search(query: Annotated[str, "The search query to use"]) -> Annotated
             link = link_element['href'] if link_element else 'No Link'
             search += f"{title}\n{snippet}\n{link}\n\n"
 
-        logger.info("Google search completed successfully")
+        logger.info("Google 搜索成功完成")
         return search
     except Exception as e:
-        logger.error(f"Error during Google search: {str(e)}")
+        logger.error(f"Google 搜索期间出错: {str(e)}")
         return f'Error: {e}'
 \
-def _scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from WebBaseLoader."]:
+def _scrape_webpages(urls: Annotated[List[str], "要抓取的 URL 列表"]) -> Annotated[str, "从 WebBaseLoader 抓取的内容。"]:
     """
-    Scrape the provided web pages for detailed information using WebBaseLoader.
+    使用 WebBaseLoader 抓取所提供的网页以获取详细信息。
 
-    This function uses the WebBaseLoader to load and scrape the content of the provided URLs.
+    此函数使用 WebBaseLoader 加载并抓取所提供 URL 的内容。
     """
     try:
-        logger.info(f"Scraping webpages: {urls}")
+        logger.info(f"正在抓取网页: {urls}")
         loader = WebBaseLoader(urls)
         docs = loader.load()
         content = "\n\n".join([f'\n{doc.page_content}\n' for doc in docs])
-        logger.info("Webpage scraping completed successfully")
+        logger.info("网页抓取成功完成")
         return content
     except Exception as e:
-        logger.error(f"Error during webpage scraping: {str(e)}")
-        raise  # Re-raise the exception to be caught by the calling function
+        logger.error(f"网页抓取期间出错: {str(e)}")
+        raise  # 重新抛出异常，交由调用函数捕获
 
-def _firecrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from FireCrawl."]:
+def _firecrawl_scrape_webpages(urls: Annotated[List[str], "要抓取的 URL 列表"]) -> Annotated[str, "从 FireCrawl 抓取的内容。"]:
     """
-    Scrape the provided web pages for detailed information using FireCrawlLoader.
+    使用 FireCrawlLoader 抓取所提供的网页以获取详细信息。
 
-    This function uses the FireCrawlLoader to load and scrape the content of the provided URLs.
+    此函数使用 FireCrawlLoader 加载并抓取所提供 URL 的内容。
 
     """
     if not FIRECRAWL_API_KEY:
         raise ValueError("FireCrawl API key is not set")
 
     try:
-        logger.info(f"Scraping webpages using FireCrawl: {urls}")
+        logger.info(f"正在使用 FireCrawl 抓取网页: {urls}")
         results = []
         for url in urls:
             loader = FireCrawlLoader(
@@ -102,7 +102,7 @@ def _firecrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrap
                 mode="scrape"
             )
             res = loader.load()
-            # Normalize different possible return types from the loader
+            # 标准化加载器可能返回的不同类型
             if isinstance(res, list):
                 for doc in res:
                     if hasattr(doc, "page_content"):
@@ -112,24 +112,24 @@ def _firecrawl_scrape_webpages(urls: Annotated[List[str], "List of URLs to scrap
             else:
                 results.append(str(res))
         aggregated = "\n\n".join(results)
-        logger.info("FireCrawl scraping completed successfully")
+        logger.info("FireCrawl 抓取成功完成")
         return aggregated
     except Exception as e:
-        logger.error(f"Error during FireCrawl scraping: {str(e)}")
-        raise  # Re-raise the exception to be caught by the calling function
+        logger.error(f"FireCrawl 抓取期间出错: {str(e)}")
+        raise  # 重新抛出异常，交由调用函数捕获
 @tool
-def scrape_webpages(urls: Annotated[List[str], "List of URLs to scrape"]) -> Annotated[str, "The scraped content from either FireCrawl or WebBaseLoader."]:
+def scrape_webpages(urls: Annotated[List[str], "要抓取的 URL 列表"]) -> Annotated[str, "从 FireCrawl 或 WebBaseLoader 抓取的内容。"]:
     """
-    Attempt to scrape webpages using FireCrawl, falling back to WebBaseLoader if unsuccessful.
+    尝试使用 FireCrawl 抓取网页，若不成功则回退到 WebBaseLoader。
     """
     try:
         return _firecrawl_scrape_webpages(urls)
     except Exception as e:
-        logger.warning(f"FireCrawl scraping failed: {str(e)}. Falling back to WebBaseLoader.")
+        logger.warning(f"FireCrawl 抓取失败: {str(e)}。回退到 WebBaseLoader。")
         try:
             return _scrape_webpages(urls)
         except Exception as e:
-            logger.error(f"Both scraping methods failed. Error: {str(e)}")
+            logger.error(f"两种抓取方法均失败。错误: {str(e)}")
             return f"Error: Unable to scrape webpages using both methods. {str(e)}"
 
-logger.info("Web scraping tools initialized")
+logger.info("网页抓取工具已初始化")

@@ -1,12 +1,12 @@
-"""LangChain tool adapters for MCP (Model Context Protocol) tools.
+"""MCP（Model Context Protocol）工具的 LangChain 工具适配器。
 
-This module provides adapters that wrap MCP tools as LangChain tools,
-enabling seamless integration between MCP servers and LangChain agents.
+本模块提供将 MCP 工具包装为 LangChain 工具的适配器，
+实现 MCP 服务器与 LangChain Agent 之间的无缝集成。
 
-Example:
+示例:
     from src.tools.mcp_tools import create_mcp_tool_adapters
     from src.core.mcp_manager import get_mcp_manager
-    
+
     manager = get_mcp_manager()
     mcp_tools = await manager.discover_tools("filesystem")
     langchain_tools = create_mcp_tool_adapters(mcp_tools, "filesystem")
@@ -28,17 +28,17 @@ logger = setup_logger()
 
 
 def _create_args_schema(
-    tool_name: str, 
+    tool_name: str,
     input_schema: Dict[str, Any]
 ) -> Type[BaseModel]:
-    """Create a Pydantic model from JSON schema for tool arguments.
+    """根据 JSON schema 创建用于工具参数的 Pydantic 模型。
 
     Args:
-        tool_name: Name of the tool (used for model naming).
-        input_schema: JSON schema for the tool's input.
+        tool_name: 工具名称（用于模型命名）。
+        input_schema: 工具输入的 JSON schema。
 
     Returns:
-        A Pydantic BaseModel class representing the schema.
+        表示该 schema 的 Pydantic BaseModel 类。
     """
     properties = input_schema.get("properties", {})
     required = set(input_schema.get("required", []))
@@ -49,7 +49,7 @@ def _create_args_schema(
         description = prop_schema.get("description", "")
         default = ... if prop_name in required else None
 
-        # Map JSON schema types to Python types
+        # 将 JSON schema 类型映射为 Python 类型
         type_mapping = {
             "string": str,
             "integer": int,
@@ -60,7 +60,7 @@ def _create_args_schema(
         }
         python_type = type_mapping.get(prop_type, str)
 
-        # Handle optional types
+        # 处理可选类型
         if prop_name not in required:
             python_type = Optional[python_type]
 
@@ -69,53 +69,53 @@ def _create_args_schema(
             Field(default=default, description=description)
         )
 
-    # Create a dynamic Pydantic model
+    # 创建动态 Pydantic 模型
     model_name = f"{tool_name.replace('-', '_').title()}Args"
     if not field_definitions:
-        # Empty schema - create a simple model
+        # 空 schema —— 创建一个简单的模型
         return create_model(model_name)
-    
+
     return create_model(model_name, **field_definitions)
 
 
 class MCPToolAdapter(BaseTool):
-    """Adapter that wraps an MCP tool as a LangChain tool.
+    """将 MCP 工具包装为 LangChain 工具的适配器。
 
-    This adapter handles the translation between LangChain's tool interface
-    and MCP's tool calling protocol.
+    本适配器负责在 LangChain 的工具接口
+    与 MCP 的工具调用协议之间进行转换。
 
     Attributes:
-        name: Tool name.
-        description: Tool description.
-        mcp_server: Name of the MCP server providing this tool.
-        mcp_tool_name: Original tool name on the MCP server.
-        args_schema: Pydantic model for argument validation.
+        name: 工具名称。
+        description: 工具描述。
+        mcp_server: 提供此工具的 MCP 服务器名称。
+        mcp_tool_name: MCP 服务器上的原始工具名称。
+        args_schema: 用于参数校验的 Pydantic 模型。
     """
 
-    name: str = Field(..., description="Tool name")
-    description: str = Field(..., description="Tool description")
-    mcp_server: str = Field(..., description="MCP server name")
-    mcp_tool_name: str = Field(..., description="Original MCP tool name")
-    args_schema: Type[BaseModel] = Field(..., description="Arguments schema")
+    name: str = Field(..., description="工具名称")
+    description: str = Field(..., description="工具描述")
+    mcp_server: str = Field(..., description="MCP 服务器名称")
+    mcp_tool_name: str = Field(..., description="原始 MCP 工具名称")
+    args_schema: Type[BaseModel] = Field(..., description="参数 schema")
 
     def _run(self, **kwargs: Any) -> str:
-        """Synchronous execution - wraps async call.
+        """同步执行 —— 包装异步调用。
 
         Args:
-            **kwargs: Tool arguments.
+            **kwargs: 工具参数。
 
         Returns:
-            Tool execution result as string.
+            工具执行结果（字符串）。
         """
         try:
             from ..core.mcp_manager import get_mcp_manager
             manager = get_mcp_manager()
-            
+
             if manager._main_loop and manager._main_loop.is_running():
-                # Use the dedicated background loop
+                # 使用专用的后台事件循环
                 def _run_async():
                     return asyncio.run_coroutine_threadsafe(self._arun(**kwargs), manager._main_loop).result(timeout=120)
-                
+
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     return executor.submit(_run_async).result()
@@ -126,17 +126,17 @@ class MCPToolAdapter(BaseTool):
                 loop = None
 
             if loop and loop.is_running():
-                # If we're already in a running event loop, we must run the
-                # async tool call in a separate thread to avoid nested loops.
+                # 如果当前已在运行中的事件循环内，则必须在单独的线程中
+                # 运行异步工具调用，以避免嵌套事件循环。
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, 
+                        asyncio.run,
                         self._arun(**kwargs)
                     )
                     return future.result(timeout=120)
             else:
-                # No running event loop in this thread, safe to use asyncio.run
+                # 当前线程中没有正在运行的事件循环，可以安全地使用 asyncio.run
                 return asyncio.run(self._arun(**kwargs))
         except Exception as e:
             error_msg = f"Error executing MCP tool {self.name}: {e}"
@@ -144,13 +144,13 @@ class MCPToolAdapter(BaseTool):
             return error_msg
 
     async def _arun(self, **kwargs: Any) -> str:
-        """Asynchronous execution via MCP manager.
+        """通过 MCP 管理器进行异步执行。
 
         Args:
-            **kwargs: Tool arguments.
+            **kwargs: 工具参数。
 
         Returns:
-            Tool execution result as string.
+            工具执行结果（字符串）。
         """
         from ..core.mcp_manager import get_mcp_manager
 
@@ -169,20 +169,20 @@ def create_mcp_tool_adapter(
     input_schema: Dict[str, Any],
     server_name: str,
 ) -> MCPToolAdapter:
-    """Create a LangChain tool adapter from MCP tool info.
+    """根据 MCP 工具信息创建一个 LangChain 工具适配器。
 
     Args:
-        tool_name: Name of the MCP tool.
-        tool_description: Description of the tool.
-        input_schema: JSON schema for tool input.
-        server_name: Name of the MCP server.
+        tool_name: MCP 工具的名称。
+        tool_description: 工具的描述。
+        input_schema: 工具输入的 JSON schema。
+        server_name: MCP 服务器的名称。
 
     Returns:
-        MCPToolAdapter instance.
+        MCPToolAdapter 实例。
     """
     args_schema = _create_args_schema(tool_name, input_schema)
 
-    # Create a prefixed name to avoid conflicts
+    # 创建带前缀的名称以避免冲突
     prefixed_name = f"mcp_{server_name}_{tool_name}"
 
     return MCPToolAdapter(
@@ -198,14 +198,14 @@ def create_mcp_tool_adapters(
     mcp_tools: List[Any],
     server_name: str,
 ) -> List[MCPToolAdapter]:
-    """Create LangChain tool adapters from a list of MCP tools.
+    """根据 MCP 工具列表创建 LangChain 工具适配器列表。
 
     Args:
-        mcp_tools: List of MCPTool objects.
-        server_name: Name of the MCP server.
+        mcp_tools: MCPTool 对象列表。
+        server_name: MCP 服务器的名称。
 
     Returns:
-        List of MCPToolAdapter instances.
+        MCPToolAdapter 实例列表。
     """
     adapters = []
     for tool in mcp_tools:
@@ -217,21 +217,21 @@ def create_mcp_tool_adapters(
                 server_name=server_name,
             )
             adapters.append(adapter)
-            logger.debug(f"Created adapter for MCP tool: {tool.name}")
+            logger.debug(f"已为 MCP 工具创建适配器: {tool.name}")
         except Exception as e:
-            logger.warning(f"Failed to create adapter for {tool.name}: {e}")
+            logger.warning(f"为 {tool.name} 创建适配器失败: {e}")
 
     return adapters
 
 
 async def get_mcp_tools_async(server_names: List[str]) -> List[MCPToolAdapter]:
-    """Asynchronously get LangChain tools from MCP servers.
+    """异步从 MCP 服务器获取 LangChain 工具。
 
     Args:
-        server_names: List of MCP server names to get tools from.
+        server_names: 要获取工具的 MCP 服务器名称列表。
 
     Returns:
-        List of MCPToolAdapter instances.
+        MCPToolAdapter 实例列表。
     """
     from ..core.mcp_manager import get_mcp_manager
 
@@ -244,35 +244,35 @@ async def get_mcp_tools_async(server_names: List[str]) -> List[MCPToolAdapter]:
             adapters = create_mcp_tool_adapters(mcp_tools, server_name)
             all_tools.extend(adapters)
             logger.info(
-                f"Loaded {len(adapters)} tools from MCP server: {server_name}"
+                f"从 MCP 服务器加载了 {len(adapters)} 个工具: {server_name}"
             )
         except Exception as e:
             logger.warning(
-                f"Failed to load tools from {server_name}: {e}"
+                f"从 {server_name} 加载工具失败: {e}"
             )
 
     return all_tools
 
 
 def get_mcp_tools_sync(server_names: List[str]) -> List[MCPToolAdapter]:
-    """Synchronously get LangChain tools from MCP servers.
+    """同步从 MCP 服务器获取 LangChain 工具。
 
-    This is a convenience wrapper for sync contexts.
+    这是一个用于同步上下文的便捷包装函数。
 
     Args:
-        server_names: List of MCP server names to get tools from.
+        server_names: 要获取工具的 MCP 服务器名称列表。
 
     Returns:
-        List of MCPToolAdapter instances.
+        MCPToolAdapter 实例列表。
     """
     try:
         from ..core.mcp_manager import get_mcp_manager
         manager = get_mcp_manager()
-        
+
         if manager._main_loop and manager._main_loop.is_running():
             def _get_async():
                 return asyncio.run_coroutine_threadsafe(get_mcp_tools_async(server_names), manager._main_loop).result(timeout=120)
-            
+
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 return executor.submit(_get_async).result()
@@ -293,5 +293,5 @@ def get_mcp_tools_sync(server_names: List[str]) -> List[MCPToolAdapter]:
         else:
             return asyncio.run(get_mcp_tools_async(server_names))
     except Exception as e:
-        logger.error(f"Failed to get MCP tools: {e}")
+        logger.error(f"获取 MCP 工具失败: {e}")
         return []

@@ -6,26 +6,25 @@ if TYPE_CHECKING:
 
 
 class ProviderFactory:
-    """A factory class for creating LLM providers with lazy loading.
+    """创建 LLM provider 的工厂类，支持延迟加载。
 
-    Each provider is imported only when requested, so users don't need
-    to install packages for providers they aren't using.
+    每个 provider 仅在请求时才被导入，因此用户无需为不使用的 provider 安装对应的包。
     """
 
     def create_provider(self, provider_name: str, **kwargs: Any) -> BaseProvider:
         """
-        Creates a provider instance based on the provider name.
+        根据 provider 名称创建对应的 provider 实例。
 
         Args:
-            provider_name: The name of the provider to create.
-            **kwargs: Additional keyword arguments for provider configuration.
+            provider_name: 要创建的 provider 的名称。
+            **kwargs: 用于 provider 配置的额外关键字参数。
 
         Returns:
-            An instance of the requested provider.
+            所请求的 provider 的实例。
 
         Raises:
-            NotImplementedError: If the provider creation is not implemented.
-            ImportError: If the required provider package is not installed.
+            NotImplementedError: 如果该 provider 的创建尚未实现。
+            ImportError: 如果所需的 provider 包未安装。
         """
         if provider_name == "openai":
             from .openai import OpenAIProvider

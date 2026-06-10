@@ -17,11 +17,11 @@ if TYPE_CHECKING:
     from ..core.state import State
 
 class SearchAgent(BaseAgent):
-    """Agent responsible for gathering and summarizing research information."""
+    """负责收集和总结研究信息的 Agent。"""
 
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
-        Initialize the SearchAgent.
+        初始化 SearchAgent。
         """
         super().__init__(
             agent_name="search_agent",
@@ -32,7 +32,7 @@ class SearchAgent(BaseAgent):
         )
 
     def _get_tools(self) -> List:
-        """Get the list of tools for information retrieval and summarization."""
+        """获取信息检索和总结的工具列表。"""
         api_wrapper = WikipediaAPIWrapper(wiki_client=None)
         wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)
         base_tools = [
@@ -48,7 +48,7 @@ class SearchAgent(BaseAgent):
         return base_tools
 
     def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
-        """Return state updates for search artifacts."""
+        """返回搜索产物的状态更新。"""
         def safe_get(obj, key, default=None):
             if isinstance(obj, dict):
                 return obj.get(key, default)

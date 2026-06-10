@@ -1,8 +1,8 @@
 from __future__ import annotations
-"""Centralized configuration for tool security and resource limits.
+"""工具安全和资源限制的集中配置。
 
-This module provides dataclasses for tool limits and a configuration manager
-that loads settings from YAML with fallback to defaults.
+本模块提供工具限制的数据类以及配置管理器，
+通过 YAML 加载设置并在缺失时回退到默认值。
 """
 
 from dataclasses import dataclass, field
@@ -15,7 +15,7 @@ from ..logger import setup_logger
 
 logger = setup_logger()
 
-# Default constants
+# 默认常量
 DEFAULT_MAX_OUTPUT_CHARS = 50000
 DEFAULT_MAX_READ_BYTES = 5 * 1024 * 1024  # 5MB
 DEFAULT_MAX_READ_LINES = 10000
@@ -24,14 +24,14 @@ DEFAULT_MAX_WRITE_BYTES = 10 * 1024 * 1024  # 10MB
 
 @dataclass
 class ExecutionLimits:
-    """Resource limits for code execution.
-    
+    """代码执行的资源限制。
+
     Attributes:
-        timeout_seconds: Max execution time. None = no limit.
-        max_memory_mb: Max memory usage (Linux only). None = no limit.
-        max_output_chars: Truncate output if exceeds this limit.
-        progress_timeout_seconds: If set, timeout resets on stdout activity.
-        blocked_patterns: Code patterns to block (security).
+        timeout_seconds: 最大执行时间。None 表示无限制。
+        max_memory_mb: 最大内存使用量（仅 Linux）。None 表示无限制。
+        max_output_chars: 超过此限制时截断输出。
+        progress_timeout_seconds: 若设置，则在有 stdout 活动时重置超时。
+        blocked_patterns: 需要阻止的代码模式（安全）。
     """
     timeout_seconds: Optional[int] = None
     max_memory_mb: Optional[int] = None
@@ -51,14 +51,14 @@ class ExecutionLimits:
 
 @dataclass
 class FileOperationLimits:
-    """Limits for file read/write operations.
-    
+    """文件读写操作的限制。
+
     Attributes:
-        max_read_bytes: Maximum file size to read.
-        max_read_lines: Maximum lines to return.
-        max_write_bytes: Maximum content size to write.
-        allowed_extensions: Whitelist of allowed file extensions.
-        blocked_paths: Paths that cannot be accessed.
+        max_read_bytes: 可读取的最大文件大小。
+        max_read_lines: 可返回的最大行数。
+        max_write_bytes: 可写入的最大内容大小。
+        allowed_extensions: 允许的文件扩展名白名单。
+        blocked_paths: 不可访问的路径。
     """
     max_read_bytes: int = DEFAULT_MAX_READ_BYTES
     max_read_lines: int = DEFAULT_MAX_READ_LINES
@@ -73,10 +73,10 @@ class FileOperationLimits:
 
 
 class ToolConfig:
-    """Central configuration manager for all tools.
-    
-    Loads settings from YAML config file with fallback to defaults.
-    Provides a singleton-like access pattern via the global TOOL_CONFIG.
+    """所有工具的集中配置管理器。
+
+    从 YAML 配置文件加载设置，缺失时回退到默认值。
+    通过全局 TOOL_CONFIG 提供类似单例的访问模式。
     """
 
     def __init__(
@@ -86,13 +86,13 @@ class ToolConfig:
         enable_security_scan: bool = True,
         enable_write_validation: bool = True
     ):
-        """Initialize tool configuration.
-        
+        """初始化工具配置。
+
         Args:
-            execution: Execution limits configuration.
-            file_ops: File operation limits configuration.
-            enable_security_scan: Whether to scan code for dangerous patterns.
-            enable_write_validation: Whether to validate content before writing.
+            execution: 执行限制配置。
+            file_ops: 文件操作限制配置。
+            enable_security_scan: 是否扫描代码中的危险模式。
+            enable_write_validation: 是否在写入前验证内容。
         """
         self.execution = execution or ExecutionLimits()
         self.file_ops = file_ops or FileOperationLimits()
@@ -101,20 +101,20 @@ class ToolConfig:
 
     @classmethod
     def load(cls, config_path: str | Path | None = None) -> ToolConfig:
-        """Load configuration from YAML file with defaults as fallback.
-        
+        """从 YAML 文件加载配置，缺失时以默认值作为回退。
+
         Args:
-            config_path: Path to YAML config file (relative to project root).
-            
+            config_path: YAML 配置文件的路径（相对于项目根目录）。
+
         Returns:
-            ToolConfig instance with loaded or default settings.
+            带有已加载设置或默认设置的 ToolConfig 实例。
         """
         if config_path is None:
             config_dir = os.getenv('CONFIG_DIRECTORY', 'config')
             config_path = os.path.join(config_dir, "tool_limits.yaml")
         settings = {}
 
-        # Try multiple paths to find the config
+        # 尝试多个路径以找到配置文件
         possible_paths = [
             Path(config_path),
             Path(os.getcwd()) / config_path,
@@ -126,15 +126,15 @@ class ToolConfig:
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         settings = yaml.safe_load(f) or {}
-                    logger.info(f"Loaded tool limits from {path}")
+                    logger.info(f"从 {path} 加载工具限制配置")
                     break
                 except Exception as e:
-                    logger.warning(f"Failed to load tool limits from {path}: {e}")
+                    logger.warning(f"从 {path} 加载工具限制配置失败：{e}")
 
         if not settings:
-            logger.debug("Tool limits config not found, using defaults")
+            logger.debug("未找到工具限制配置文件，使用默认设置")
 
-        # Parse execution settings
+        # 解析执行设置
         exec_settings = settings.get("execution", {})
         exec_limits = ExecutionLimits(
             timeout_seconds=exec_settings.get("timeout_seconds"),
@@ -144,7 +144,7 @@ class ToolConfig:
             blocked_patterns=exec_settings.get("blocked_patterns", ExecutionLimits().blocked_patterns),
         )
 
-        # Parse file operation settings
+        # 解析文件操作设置
         file_settings = settings.get("file_operations", {})
         file_limits = FileOperationLimits(
             max_read_bytes=file_settings.get("max_read_bytes", 5 * 1024 * 1024),
@@ -162,7 +162,7 @@ class ToolConfig:
         )
 
     def to_dict(self) -> dict:
-        """Export current configuration as dictionary."""
+        """将当前配置导出为字典。"""
         return {
             "execution": {
                 "timeout_seconds": self.execution.timeout_seconds,
@@ -183,9 +183,9 @@ class ToolConfig:
         }
 
 
-# Global singleton instance
+# 全局单例实例
 try:
     TOOL_CONFIG = ToolConfig.load()
 except Exception as e:
-    logger.error(f"Error initializing ToolConfig: {e}, using defaults")
+    logger.error(f"初始化 ToolConfig 时出错：{e}，使用默认设置")
     TOOL_CONFIG = ToolConfig()

@@ -24,10 +24,11 @@ def hypothesis_router(state: State) -> NodeType:
     根据状态中是否存在假设来进行路由。
     """
     logger.info("Entering hypothesis_router")
-    # 语义变化: check 'current_instruction' 代替'process'
+    # 语义变化: 检查 'current_instruction' 代替 'process'
     current_instruction = get_state_attr(state, "current_instruction")
     #把整个状态对象传进去，帮我取current_instruction这个字段，取出来的值填入同名变量
-    if current_instruction == "Continue the research process":
+    # 兼容中英文两种值（来自 human_choice_node 或历史数据）
+    if current_instruction in ("继续执行研究流程", "Continue the research process"):
         return "Process"
     else:
         return "Hypothesis"
@@ -70,7 +71,7 @@ def process_router(state: State) -> ProcessNodeType:
     根据状态中的流程判定进行路由.
     """
     logger.info("Entering process_router")
-    #  'next_workflow_step' 代替 'process_decision'
+    #  检查 'next_workflow_step' 代替 'process_decision'
     next_step = get_state_attr(state, "next_workflow_step", "")
     
     valid_decisions = {"Coder", "Search", "Visualization", "Report"}

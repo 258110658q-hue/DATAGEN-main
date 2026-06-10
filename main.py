@@ -5,10 +5,18 @@ import warnings
 import asyncio
 import threading
 
-# 1. Suppress the USER_AGENT warning
+# 0. 修复 Windows GBK 编码问题 — 强制所有标准流使用 UTF-8
+#    否则 LangChain 的 pretty_print() 会在遇到 ✓ 等字符时崩溃
+for _stream_name in ('stdout', 'stderr'):
+    try:
+        getattr(sys, _stream_name).reconfigure(encoding='utf-8')
+    except Exception:
+        pass  # 该流不支持 reconfigure（例如被管道/重定向后）
+
+# 1. 抑制 USER_AGENT 警告
 os.environ["USER_AGENT"] = "mydataapp/1.0"
 #我的程序名字叫 什么，别再警告我没设置身份了！
-# 2. Setup a stream interceptor to filter out unwanted prints from libraries/subprocesses
+# 2. 设置流拦截器，过滤掉库/子进程中的非必要输出
 class OutputFilter:
     #输出过滤器类，过滤掉不需要的输出
     def __init__(self, stream, blacklist):
@@ -18,15 +26,15 @@ class OutputFilter:
         if not any(term in data for term in self.blacklist):
             self.stream.write(data)
             #for term in ["词1", "词2", "词3"]:
-    
+
     def flush(self):
         self.stream.flush()#给人感觉流式的输出
-    def __getattr__(self, name):#把当前类 “没有的属性和方法”，全部转发给 self.stream 去处理。
+    def __getattr__(self, name):#把当前类 "没有的属性和方法"，全部转发给 self.stream 去处理。
         return getattr(self.stream, name)
 
-# Apply filter to stderr where most MCP server noise lives
+# 将 sys.stderr（标准错误输出流）替换为我们自定义的 OutputFilter 实例，
+# 大多数 MCP 服务端噪声都出现在 stderr 中
 sys.stderr = OutputFilter(sys.stderr, [
-    #将sys.stderr（标准错误输出流）替换为我们自定义的OutputFilter实例
     "Secure MCP Filesystem Server",
     "Client does not support MCP Roots",
     "USER_AGENT environment variable not set",
@@ -51,24 +59,24 @@ def run_mcp_loop(loop):
     try:
         loop.run_forever()
     except Exception as e:
-        logger.error(f"MCP background loop error: {e}")
+        logger.error(f"MCP 后台循环异常: {e}")
         #相当于是一个FastAPI后端一样，一直运行的服务端口，
 
 def main():
-    """Main entry point"""
+    """主入口点"""
     # 创建并启动后台事件循环，以维持 MCP 长连接
     mcp_loop = asyncio.new_event_loop()
     mcp_thread = threading.Thread(target=run_mcp_loop, args=(mcp_loop,), daemon=True)
     mcp_thread.start()
-    
+
     # 向 MCP 管理器注册该循环，告诉工具：后台线程在哪里
     manager = get_mcp_manager()
     manager._main_loop = mcp_loop
-    
+
     try:
         system = MultiAgentSystem()
-        
-        # Example usage
+
+        # 示例用法
         user_input = '''
         请分析当前目录下的 OnlineSalesData.csv 文件（用collect_data读取它，CSV列名为：日期、销售额、利润、客户数、区域、产品类别、促销活动）。
         任务：
@@ -80,7 +88,7 @@ def main():
         '''
         system.run(user_input)
     finally:
-        # Cleanup
+        # 清理资源
         if mcp_loop.is_running():
             mcp_loop.call_soon_threadsafe(mcp_loop.stop)
         mcp_thread.join(timeout=2)

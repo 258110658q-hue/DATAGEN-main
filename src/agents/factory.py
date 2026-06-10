@@ -10,7 +10,7 @@ from .note_agent import NoteAgent
 from ..config import WORKING_DIRECTORY
 
 class AgentFactory:
-    """A factory class for creating agents."""
+    """用于创建智能体的工厂类。"""
 
     def __init__(self, language_model_manager, team_members, working_directory=WORKING_DIRECTORY):
         """

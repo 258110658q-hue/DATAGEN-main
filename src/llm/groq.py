@@ -6,8 +6,8 @@ from .base import BaseProvider
 
 
 class ChatGroqProvider(BaseProvider):
-    """Provider for ChatGroq models."""
+    """ChatGroq 模型的提供器。"""
 
     def get_model_class(self) -> Type:
-        """Returns the ChatGroq class."""
+        """返回 ChatGroq 类。"""
         return ChatGroq

@@ -14,7 +14,7 @@ class State(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed=True, 
         validate_assignment=True,
-        extra='ignore'#模型传入未定义的字段，忽略而不是报错
+        extra='ignore'  # 模型传入未定义的字段，忽略而不是报错
     )
 
     # === 上下文层 ===
@@ -59,19 +59,19 @@ class State(BaseModel):
     
     search_artifacts: dict[str, str] = Field(
         default_factory=dict, 
-        description="Map of {path: summary} for search results"
+        description="{文件路径: 摘要} 映射，存储搜索结果"
     )
     data_viz_artifacts: dict[str, str] = Field(
         default_factory=dict, 
-        description="Map of {path: summary} for visualizations"
+        description="{文件路径: 摘要} 映射，存储可视化产物"
     )
     code_artifacts: dict[str, str] = Field(
         default_factory=dict, 
-        description="Map of {path: summary} for code files"
+        description="{文件路径: 摘要} 映射，存储代码文件"
     )
     report_artifacts: dict[str, str] = Field(
         default_factory=dict, 
-        description="Map of {section: path/content} for report sections"
+        description="{章节: 路径/内容} 映射，存储报告章节"
     )
 
     # === Review Loop ===
@@ -92,9 +92,7 @@ class State(BaseModel):
     # 必要时可使用属性或别名，但我们将按照要求执行强制中断。
 
 def create_initial_state(user_input: str) -> dict[str, Any]:
-    """
-    用于为 LangGraph 创建初始状态字典的工厂函数
-    """
+    """用于为 LangGraph 创建初始状态字典的工厂函数"""
     return {
         "messages": [HumanMessage(content=user_input)],
         "last_active_agent": "user",

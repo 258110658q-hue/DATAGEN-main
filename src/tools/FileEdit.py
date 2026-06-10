@@ -8,27 +8,27 @@ import pandas as pd
 from ..logger import setup_logger
 from ..config import WORKING_DIRECTORY
 
-# Set up logger
+# 设置日志记录器
 logger = setup_logger()
 
-# Ensure the working directory exists
+# 确保工作目录存在
 if not os.path.exists(WORKING_DIRECTORY):
     os.makedirs(WORKING_DIRECTORY)
     logger.info(f"Created working directory: {WORKING_DIRECTORY}")
 
 def normalize_path(file_path: str) -> str:
     """
-    Normalize file path for cross-platform compatibility.
+    规范化文件路径以实现跨平台兼容。
 
     Args:
-    file_path (str): The file path to normalize
+    file_path (str): 要规范化的文件路径
 
     Returns:
-    str: Normalized file path
+    str: 规范化后的文件路径
     """
-    # Strip common prefixes that would cause double nesting
+    # 去除会导致双重嵌套的常见前缀
     clean_path = file_path.replace("\\", "/").lstrip("./")
-    # Remove data/ prefix if WORKING_DIRECTORY already ends with data/
+    # 如果 WORKING_DIRECTORY 已经以 data/ 结尾，则移除 data/ 前缀
     wd_clean = WORKING_DIRECTORY.replace("\\", "/").rstrip("/")
     if clean_path.startswith(wd_clean.lstrip("./") + "/"):
         clean_path = clean_path[len(wd_clean.lstrip("./")) + 1:]
@@ -44,7 +44,7 @@ def collect_data(
     skiprows: Annotated[int | None, "Number of rows to skip at the beginning"] = None
 ) -> Annotated[pd.DataFrame, "The collected data from the CSV file"]:
     """
-    Collect data from a CSV file with selective reading options.
+    从 CSV 文件中收集数据，支持选择性读取选项。
     """
     data_path = normalize_path(data_path)
     logger.info(f"Attempting to read CSV file: {data_path}")
@@ -71,9 +71,9 @@ def create_document(
     file_name: Annotated[str, "Name of the file to save the document"]
 ) -> Annotated[str, "Message indicating where the document was saved"]:
     """
-    Create and save a text document in Markdown format.
+    创建并保存一个 Markdown 格式的文本文档。
 
-    This function takes a list of points and writes them as numbered items in a Markdown file.
+    此函数接收一个要点列表，并将其作为编号条目写入 Markdown 文件中。
 
     """
     try:
@@ -95,29 +95,29 @@ def read_document(
     end: Annotated[int, "Ending line number (use -1 for end of file)"] = -1
 ) -> Annotated[str, "Content of the document"]:
     """
-    Read the specified document with security validation.
+    读取指定文档并进行安全验证。
 
-    This function reads a document from the specified file and returns its content.
-    Security features:
-    - Path validation (blocked paths check)
-    - File size validation
-    - Line count limiting
+    此函数从指定文件读取文档并返回其内容。
+    安全功能：
+    - 路径验证（阻止路径检查）
+    - 文件大小验证
+    - 行数限制
 
     Args:
-        file_name: Name of the file to read.
-        start: Starting line number (0-indexed, default: 0).
-        end: Ending line number (-1 for end of file, default: -1).
+        file_name: 要读取的文件名。
+        start: 起始行号（0 索引，默认值：0）。
+        end: 结束行号（-1 表示文件末尾，默认值：-1）。
 
     Returns:
-        Content of the document or error message.
+        文档内容或错误消息。
     """
     from .validators import PathValidator
     from .tool_config import TOOL_CONFIG
 
     try:
         file_path = normalize_path(file_name)
-        
-        # === VALIDATION ===
+
+        # === 验证 ===
         try:
             PathValidator.validate_read(file_path)
         except (PermissionError, ValueError) as e:
@@ -126,23 +126,23 @@ def read_document(
 
         with open(file_path, "r", encoding='utf-8') as file:
             lines = file.readlines()
-        
-        # Apply line limit
+
+        # 应用行数限制
         max_lines = TOOL_CONFIG.file_ops.max_read_lines
         if len(lines) > max_lines:
             lines = lines[:max_lines]
             truncated_notice = f"\n\n... [TRUNCATED: showing first {max_lines} lines]"
         else:
             truncated_notice = ""
-        
-        # Handle special values
+
+        # 处理特殊值
         if start == 0 and end == -1:
             content = "".join(lines)
         elif end == -1:
             content = "".join(lines[start:])
         else:
             content = "".join(lines[start:end])
-            
+
         return content + truncated_notice
     except Exception as e:
         return f"Error: {str(e)}"
@@ -153,34 +153,34 @@ def write_document(
     file_name: Annotated[str, "Name of the file to save the document"]
 ) -> Annotated[str, "Message indicating where the document was saved"]:
     """
-    Create and save a Markdown document with validation.
+    创建并保存一个 Markdown 文档并进行验证。
 
-    This function takes a string of content and writes it to a file.
-    Security features:
-    - Path validation (blocked paths check)
-    - Content size validation
-    - Content quality warnings (TODO/FIXME detection)
+    此函数接收一个内容字符串并将其写入文件。
+    安全功能：
+    - 路径验证（阻止路径检查）
+    - 内容大小验证
+    - 内容质量警告（检测 TODO/FIXME）
 
     Args:
-        content: Content to write to the file.
-        file_name: Name of the file to save.
+        content: 要写入文件的内容。
+        file_name: 要保存的文件名。
 
     Returns:
-        Success message or error.
+        成功消息或错误信息。
     """
     from .validators import PathValidator, ContentValidator
 
     try:
         file_path = normalize_path(file_name)
-        
-        # === PATH VALIDATION ===
+
+        # === 路径验证 ===
         try:
             PathValidator.validate_write(file_path)
         except PermissionError as e:
             logger.warning(f"Write path validation failed: {e}")
             return f"Error: {e}"
 
-        # === CONTENT VALIDATION ===
+        # === 内容验证 ===
         is_valid, message = ContentValidator.validate_and_log(content, file_path)
         if not is_valid:
             return f"Error: {message}"
@@ -189,9 +189,9 @@ def write_document(
         with open(file_path, "w", encoding='utf-8') as file:
             file.write(content)
         logger.info(f"Document written successfully: {file_path}")
-        
+
         result = f"Document saved to {file_path}"
-        if message:  # Warnings
+        if message:  # 警告
             result += f" ({message})"
         return result
     except Exception as e:
@@ -199,8 +199,8 @@ def write_document(
         return f"Error while saving document: {str(e)}"
 
 class LineInsert(BaseModel):
-    line_number: int = Field(description="Line number to insert at")
-    text: str = Field(description="Text to insert")
+    line_number: int = Field(description="要插入的行号")
+    text: str = Field(description="要插入的文本")
 
 
 @tool
@@ -208,7 +208,7 @@ def edit_document(
     file_name: Annotated[str, "Name of the file to edit"],
     inserts: Annotated[List[LineInsert], "List of line insertions"]
 ) -> Annotated[str, "Message indicating where the document was saved"]:
-    """Edit a document by inserting text at specific line numbers."""
+    """通过在指定行号插入文本来编辑文档。"""
     try:
         file_path = normalize_path(file_name)
         with open(file_path, "r", encoding='utf-8') as file:
@@ -220,10 +220,10 @@ def edit_document(
         for line_number, text in sorted_inserts:
             if 1 <= line_number <= len(lines) + 1:
                 lines.insert(line_number - 1, text + "\n")
-        
+
         with open(file_path, "w", encoding='utf-8') as file:
             file.writelines(lines)
-        
+
         return f"Document edited and saved to {file_path}"
     except Exception as e:
         return f"Error while editing document: {str(e)}"

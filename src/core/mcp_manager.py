@@ -9,11 +9,10 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-"""This module provides management of MCP server connections and tool exposure
-for agents. It uses the official MCP Python SDK for real server communication
-via stdio transport.
+"""本模块提供 MCP 服务器连接的管理以及为 Agent 暴露工具的功能。
+它使用官方 MCP Python SDK 通过 stdio 传输进行真实的服务器通信。
 
-Reference: https://modelcontextprotocol.io/
+参考: https://modelcontextprotocol.io/
 """
 
 
@@ -21,26 +20,26 @@ from ..logger import setup_logger
 
 
 logger = setup_logger()
-# Silence noisy system loggers
+# 静默嘈杂的系统日志记录器
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 logging.getLogger("anyio").setLevel(logging.CRITICAL)
 
 
-# Constants
+# 常量
 MCP_SERVER_STOP_TIMEOUT = 5
 CONNECTION_TIMEOUT = 30
 
 
 @dataclass
 class MCPServerConfig:
-    """Configuration for an MCP server.
+    """MCP 服务器的配置。
 
     Attributes:
-        name: Server identifier.
-        command: Command to start the server.
-        args: Command line arguments.
-        env: Environment variables for the server.
-        description: Human-readable description.
+        name: 服务器标识符。
+        command: 启动服务器的命令。
+        args: 命令行参数。
+        env: 服务器的环境变量。
+        description: 人类可读的描述。
     """
     name: str
     command: str
@@ -51,13 +50,13 @@ class MCPServerConfig:
 
 @dataclass
 class MCPResource:
-    """A resource exposed by an MCP server.
+    """MCP 服务器暴露的资源。
 
     Attributes:
-        uri: Unique resource identifier.
-        name: Human-readable name.
-        mime_type: MIME type of the resource.
-        description: Optional description.
+        uri: 唯一的资源标识符。
+        name: 人类可读的名称。
+        mime_type: 资源的 MIME 类型。
+        description: 可选的描述。
     """
     uri: str
     name: str
@@ -67,13 +66,13 @@ class MCPResource:
 
 @dataclass
 class MCPTool:
-    """A tool exposed by an MCP server.
+    """MCP 服务器暴露的工具。
 
     Attributes:
-        name: Tool identifier.
-        description: Human-readable description.
-        input_schema: JSON schema for tool input.
-        server_name: Name of the server providing this tool.
+        name: 工具标识符。
+        description: 人类可读的描述。
+        input_schema: 工具输入的 JSON schema。
+        server_name: 提供该工具的服务器的名称。
     """
     name: str
     description: str
@@ -83,51 +82,51 @@ class MCPTool:
 
 @dataclass
 class MCPServerConnection:
-    """Active connection to an MCP server.
+    """到 MCP 服务器的活动连接。
 
     Attributes:
-        name: Server name identifier.
-        session: The MCP ClientSession for communication.
-        client_context: Context manager for the transport (e.g. stdio).
-        session_context: Context manager for the session.
-        loop: The event loop this connection belongs to.
+        name: 服务器名称标识符。
+        session: 用于通信的 MCP ClientSession。
+        client_context: 传输的上下文管理器（例如 stdio）。
+        session_context: 会话的上下文管理器。
+        loop: 该连接所属的事件循环。
     """
     name: str
     session: Any  # mcp.ClientSession
-    client_context: Any  # Context manager for the transport
-    session_context: Any  # Context manager for the session
-    loop: Any = None  # The event loop this connection belongs to
+    client_context: Any  # 传输的上下文管理器
+    session_context: Any  # 会话的上下文管理器
+    loop: Any = None  # 该连接所属的事件循环
 
 
 class MCPManager:
-    """Manages MCP server connections and tool exposure.
+    """管理 MCP 服务器连接和工具暴露。
 
-    This manager handles:
-    - Loading MCP server configurations
-    - Starting and stopping MCP servers via stdio transport
-    - Discovering tools and resources from servers
-    - Calling tools on connected servers
-    - Providing tools to agents based on their configuration
+    此管理器处理：
+    - 加载 MCP 服务器配置
+    - 通过 stdio 传输启动和停止 MCP 服务器
+    - 发现服务器上的工具和资源
+    - 在已连接的服务器上调用工具
+    - 根据 Agent 的配置为其提供工具
 
     Attributes:
-        config_path: Path to the MCP configuration file.
+        config_path: MCP 配置文件的路径。
     """
 
     def __init__(self, config_path: str | Path | None = None) -> None:
-        """Initialize the MCP manager.
+        """初始化 MCP 管理器。
 
         Args:
-            config_path: Path to the MCP configuration file.
+            config_path: MCP 配置文件的路径。
         """
         if config_path is None:
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 loop = None
-            
+
             config_dir = os.getenv('CONFIG_DIRECTORY', 'config')
             config_path = os.path.join(config_dir, "mcp.yaml")
-            
+
         self.config_path = Path(config_path)
         self._config: Optional[Dict[str, Any]] = None
         self._servers: Dict[str, MCPServerConfig] = {}
@@ -136,8 +135,8 @@ class MCPManager:
         self._global_lock = asyncio.Lock()
         self._main_loop: Optional[asyncio.AbstractEventLoop] = None
         self._mcp_stderr_file = None
-        
-        # Setup a loop exception handler to swallow noisy anyio/asyncio errors
+
+        # 设置循环异常处理器以吞掉嘈杂的 anyio/asyncio 错误
         try:
             loop = asyncio.get_event_loop()
             def silent_exception_handler(loop, context):
@@ -150,37 +149,37 @@ class MCPManager:
             pass
 
     def _get_lock(self, server_name: str) -> asyncio.Lock:
-        """Get or create a lock for a specific server."""
+        """获取或创建一个特定服务器的锁。"""
         if server_name not in self._connection_locks:
             self._connection_locks[server_name] = asyncio.Lock()
         return self._connection_locks[server_name]
 
     @property
     def config(self) -> Dict[str, Any]:
-        """Lazy-load MCP configuration.
+        """延迟加载 MCP 配置。
 
         Returns:
-            Configuration dictionary.
+            配置字典。
         """
         if self._config is None:
             self._config = self._load_config()
         return self._config
 
     def get_server_config(self, name: str) -> Optional[MCPServerConfig]:
-        """Get configuration for a specific MCP server.
+        """获取特定 MCP 服务器的配置。
 
         Args:
-            name: Server name.
+            name: 服务器名称。
 
         Returns:
-            MCPServerConfig or None if not found.
+            MCPServerConfig，如果未找到则返回 None。
         """
         if name in self._servers:
             return self._servers[name]
 
         servers = self.config.get("servers", {})
         if name not in servers:
-            logger.warning(f"MCP server not found: {name}")
+            logger.warning(f"未找到 MCP 服务器: {name}")
             return None
 
         server_config = servers[name]
@@ -195,13 +194,13 @@ class MCPManager:
         return mcp_config
 
     def get_enabled_servers(self, agent_name: str) -> List[MCPServerConfig]:
-        """Get list of MCP servers enabled for an agent.
+        """获取为某个 Agent 启用的 MCP 服务器列表。
 
         Args:
-            agent_name: Name of the agent.
+            agent_name: Agent 的名称。
 
         Returns:
-            List of MCPServerConfig for enabled servers.
+            已启用的服务器的 MCPServerConfig 列表。
         """
         from .agent_config_loader import get_agent_config_loader
 
@@ -217,32 +216,32 @@ class MCPManager:
         return servers
 
     async def connect(self, server_name: str) -> bool:
-        """Connect to an MCP server via stdio transport.
+        """通过 stdio 传输连接到 MCP 服务器。
 
         Args:
-            server_name: Name of the server to connect to.
+            server_name: 要连接的服务器的名称。
 
         Returns:
-            True if connection successful, False otherwise.
+            如果连接成功则返回 True，否则返回 False。
         """
-        # Get or create lock for this server
+        # 获取或创建该服务器的锁
         async with self._global_lock:
             if server_name not in self._connection_locks:
                 self._connection_locks[server_name] = asyncio.Lock()
-        """Connect to an MCP server with locking."""
+        """带锁连接到 MCP 服务器。"""
         async with self._get_lock(server_name):
-            # Check if already connected and active
+            # 检查是否已连接且处于活动状态
             if server_name in self._connections:
                 conn = self._connections[server_name]
                 if conn.session:
                     return True
                 else:
-                    # Clean up broken connection
+                    # 清理已损坏的连接
                     await self._close_server_connection(server_name)
 
             config = self.get_server_config(server_name)
             if not config:
-                logger.error(f"Configuration not found for MCP server: {server_name}")
+                logger.error(f"未找到 MCP 服务器的配置: {server_name}")
                 return False
 
             try:
@@ -259,21 +258,21 @@ class MCPManager:
                     env=env
                 )
 
-                logger.info(f"Connecting to MCP server: {server_name}...")
-                
-                # Redirect stderr to avoid console noise from MCP servers
+                logger.info(f"正在连接到 MCP 服务器: {server_name}...")
+
+                # 重定向 stderr 以避免 MCP 服务器的控制台噪音
                 if self._mcp_stderr_file is None:
                     try:
-                        # Ensure logs directory exists
+                        # 确保 logs 目录存在
                         os.makedirs("logs", exist_ok=True)
                         self._mcp_stderr_file = open("logs/mcp_servers.log", "a", encoding="utf-8")
                     except Exception:
                         self._mcp_stderr_file = sys.stderr
 
-                # Use a context manager but handle it manually to keep streams alive
+                # 使用上下文管理器，但手动处理以保持流存活
                 client_context = stdio_client(server_params, errlog=self._mcp_stderr_file)
                 read_stream, write_stream = await client_context.__aenter__()
-                
+
                 session_context = ClientSession(read_stream, write_stream)
                 session = await session_context.__aenter__()
                 await session.initialize()
@@ -285,55 +284,55 @@ class MCPManager:
                     session=session,
                     loop=asyncio.get_running_loop()
                 )
-                logger.info(f"Successfully connected to {server_name}")
+                logger.info(f"成功连接到 {server_name}")
                 return True
             except Exception as e:
-                logger.error(f"Failed to connect to {server_name}: {str(e)}", exc_info=True)
+                logger.error(f"连接 {server_name} 失败: {str(e)}", exc_info=True)
                 return False
 
     async def _close_server_connection(self, server_name: str) -> None:
-        """Internal helper to close a connection cleanly."""
+        """内部辅助函数，用于干净地关闭一个连接。"""
         conn = self._connections.pop(server_name, None)
         if conn:
             try:
-                # Attempt graceful closure of the session and client contexts.
-                # Catching anyio-specific task mismatch or closed resource errors 
-                # that occur when loops are switched or tasks are terminated abruptly.
+                # 尝试优雅地关闭会话和客户端上下文。
+                # 捕获 anyio 特定的任务不匹配或已关闭资源错误，
+                # 这些错误发生在循环切换或任务被突然终止时。
                 if conn.session_context:
                     try:
                         await conn.session_context.__aexit__(None, None, None)
                     except (anyio.ClosedResourceError, RuntimeError, Exception) as e:
-                        logger.debug(f"Non-fatal error closing session context for {server_name}: {e}")
-                
+                        logger.debug(f"关闭 {server_name} 的会话上下文时发生非致命错误: {e}")
+
                 if conn.client_context:
                     try:
                         await conn.client_context.__aexit__(None, None, None)
                     except (anyio.ClosedResourceError, RuntimeError, Exception) as e:
-                        logger.debug(f"Non-fatal error closing client context for {server_name}: {e}")
+                        logger.debug(f"关闭 {server_name} 的客户端上下文时发生非致命错误: {e}")
             except Exception as e:
-                logger.debug(f"Error during cleanup of {server_name}: {e}")
+                logger.debug(f"清理 {server_name} 时发生错误: {e}")
 
     async def disconnect(self, server_name: str) -> None:
-        """Disconnect from an MCP server.
+        """断开与 MCP 服务器的连接。
 
         Args:
-            server_name: Name of the server to disconnect from.
+            server_name: 要断开连接的服务器的名称。
         """
         async with self._get_lock(server_name):
             await self._close_server_connection(server_name)
-            logger.info(f"Disconnected from MCP server: {server_name}")
+            logger.info(f"已断开与 MCP 服务器的连接: {server_name}")
 
     async def close_all(self) -> None:
-        """Disconnect from all MCP servers."""
+        """断开所有 MCP 服务器的连接。"""
         server_names = list(self._connections.keys())
         for name in server_names:
             await self.disconnect(name)
-        logger.info("All MCP connections closed")
+        logger.info("所有 MCP 连接已关闭")
 
     async def _get_or_create_connection(
         self, server_name: str
     ) -> Optional[MCPServerConnection]:
-        """Get existing connection or create a new one with loop-awareness."""
+        """获取现有连接或创建一个新连接，具有循环感知能力。"""
         try:
             current_loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -341,11 +340,11 @@ class MCPManager:
 
         if server_name in self._connections:
             conn = self._connections[server_name]
-            # Verify if connection is valid for current loop
+            # 验证连接是否对当前循环有效
             if conn.loop is current_loop and conn.session:
                 return conn
             else:
-                logger.debug(f"Detected stale or loop-mismatched connection for {server_name}. Reconnecting...")
+                logger.debug(f"检测到 {server_name} 存在过期或循环不匹配的连接。正在重新连接...")
                 await self.disconnect(server_name)
 
         success = await self.connect(server_name)
@@ -355,23 +354,23 @@ class MCPManager:
         return self._connections.get(server_name)
 
     async def discover_tools(self, server_name: str) -> List[MCPTool]:
-        """Discover tools from an MCP server with robust retry.
+        """从 MCP 服务器发现工具，具有健壮的重试机制。
 
         Args:
-            server_name: Name of the MCP server.
+            server_name: MCP 服务器的名称。
 
         Returns:
-            List of MCPTool objects discovered from the server.
+            从服务器发现的 MCPTool 对象列表。
         """
         for attempt in range(2):
             conn = await self._get_or_create_connection(server_name)
             if not conn:
-                logger.error(f"Cannot discover tools: not connected to {server_name}")
+                logger.error(f"无法发现工具: 未连接到 {server_name}")
                 return []
 
             try:
                 tools_response = await conn.session.list_tools()
-                    
+
                 tools = []
                 for tool in tools_response.tools:
                     tools.append(MCPTool(
@@ -380,28 +379,28 @@ class MCPManager:
                         input_schema=tool.inputSchema if hasattr(tool, 'inputSchema') else {},
                         server_name=server_name,
                     ))
-                logger.info(f"Discovered {len(tools)} tools from {server_name}")
+                logger.info(f"从 {server_name} 发现了 {len(tools)} 个工具")
                 return tools
             except Exception as e:
-                logger.warning(f"Failed to discover tools from {server_name} (attempt {attempt+1}/2): {e}")
-                # Force disconnect before retry
+                logger.warning(f"从 {server_name} 发现工具失败 (尝试 {attempt+1}/2): {e}")
+                # 重试前强制断开连接
                 await self.disconnect(server_name)
                 if attempt == 1:
-                    logger.error(f"Max retries reached for tool discovery on {server_name}")
+                    logger.error(f"已达到 {server_name} 工具发现的最大重试次数")
                     return []
 
     async def list_resources(self, server_name: str) -> List[MCPResource]:
-        """List available resources from an MCP server.
+        """列出 MCP 服务器上可用的资源。
 
         Args:
-            server_name: Name of the MCP server.
+            server_name: MCP 服务器的名称。
 
         Returns:
-            List of MCPResource objects.
+            MCPResource 对象列表。
         """
         conn = await self._get_or_create_connection(server_name)
         if not conn:
-            logger.error(f"Cannot list resources: not connected to {server_name}")
+            logger.error(f"无法列出资源: 未连接到 {server_name}")
             return []
 
         try:
@@ -414,30 +413,30 @@ class MCPManager:
                     mime_type=resource.mimeType if hasattr(resource, 'mimeType') else "text/plain",
                     description=resource.description if hasattr(resource, 'description') else "",
                 ))
-            logger.info(f"Found {len(resources)} resources from {server_name}")
+            logger.info(f"从 {server_name} 找到了 {len(resources)} 个资源")
             return resources
         except Exception as e:
-            logger.error(f"Failed to list resources from {server_name}: {e}")
+            logger.error(f"从 {server_name} 列出资源失败: {e}")
             return []
 
     async def call_tool(self, server_name: str, tool_name: str, arguments: Dict[str, Any] = None) -> Any:
-        """Call a tool on a server with robust retry and session validation."""
+        """在服务器上调用工具，具有健壮的重试和会话验证机制。"""
         if arguments is None:
             arguments = {}
 
         for attempt in range(3):
             try:
-                # Use the loop-aware connection getter to ensure we are using 
-                # a connection bound to the current event loop.
+                # 使用循环感知的连接获取器，确保我们使用的是
+                # 绑定到当前事件循环的连接。
                 conn = await self._get_or_create_connection(server_name)
                 if not conn or not conn.session:
-                    raise Exception(f"Failed to establish or retrieve valid connection for {server_name}")
+                    raise Exception(f"未能建立或检索到 {server_name} 的有效连接")
 
-                # Call the tool
+                # 调用工具
                 from mcp import types as mcp_types
                 result = await conn.session.call_tool(tool_name, arguments)
 
-                # Extract content from result
+                # 从结果中提取内容
                 contents = []
                 for content in result.content:
                     text = ""
@@ -446,17 +445,17 @@ class MCPManager:
                     elif hasattr(content, 'text'):
                         text = content.text
                     elif hasattr(content, 'data'):
-                        contents.append(f"[Binary data: {len(content.data)} bytes]")
+                        contents.append(f"[二进制数据: {len(content.data)} 字节]")
                         continue
                     else:
                         text = str(content)
-                    
-                    # Filter out common MCP startup banners that sometimes leak into stdout
+
+                    # 过滤掉有时会泄漏到 stdout 的常见 MCP 启动横幅
                     if "Secure MCP Filesystem Server running on stdio" in text:
                         continue
                     if "Client does not support MCP Roots" in text:
                         continue
-                    
+
                     if text:
                         contents.append(text)
 
@@ -464,36 +463,36 @@ class MCPManager:
 
             except Exception as e:
                 error_msg = str(e) or e.__class__.__name__
-                logger.warning(f"Tool call failed (attempt {attempt+1}/3) for {server_name}.{tool_name}: {error_msg}")
+                logger.warning(f"工具调用失败 (尝试 {attempt+1}/3) 针对 {server_name}.{tool_name}: {error_msg}")
                 if attempt < 2:
-                    # Force disconnect and clear session before retry
+                    # 重试前强制断开连接并清除会话
                     await self.disconnect(server_name)
-                    # Use a slightly longer backoff for filesystem to allow OS resource cleanup
+                    # 对 filesystem 使用稍长的退避时间，以允许操作系统资源清理
                     backoff = 1.0 if server_name != "filesystem" else 1.5
                     await asyncio.sleep(backoff)
                 else:
-                    logger.error(f"Max retries reached for tool {tool_name} on {server_name}")
+                    logger.error(f"已达到 {server_name} 上工具 {tool_name} 的最大重试次数")
                     raise e
 
     async def read_resource(self, server_name: str, uri: str) -> str:
-        """Read a resource from an MCP server.
+        """从 MCP 服务器读取资源。
 
         Args:
-            server_name: Name of the MCP server.
-            uri: URI of the resource to read.
+            server_name: MCP 服务器的名称。
+            uri: 要读取的资源的 URI。
 
         Returns:
-            Resource content as a string.
+            作为字符串的资源内容。
         """
         conn = await self._get_or_create_connection(server_name)
         if not conn:
-            return f"Error: Not connected to MCP server {server_name}"
+            return f"错误: 未连接到 MCP 服务器 {server_name}"
 
         try:
             from mcp import types as mcp_types
 
             result = await conn.session.read_resource(uri)
-            
+
             contents = []
             for content in result.contents:
                 if isinstance(content, mcp_types.TextContent):
@@ -506,21 +505,21 @@ class MCPManager:
             return "\n".join(contents)
 
         except Exception as e:
-            error_msg = f"Error reading resource {uri}: {e}"
+            error_msg = f"读取资源 {uri} 时出错: {e}"
             logger.error(error_msg)
             return error_msg
 
     def get_tools_for_agent(self, agent_name: str) -> List[MCPTool]:
-        """Get all tools from MCP servers enabled for an agent (sync wrapper).
+        """获取为某个 Agent 启用的 MCP 服务器上的所有工具（同步包装器）。
 
-        This is a synchronous wrapper that runs the async version.
-        For new code, prefer using discover_tools() directly.
+        这是一个运行异步版本的同步包装器。
+        对于新代码，建议直接使用 discover_tools()。
 
         Args:
-            agent_name: Name of the agent.
+            agent_name: Agent 的名称。
 
         Returns:
-            List of MCPTool objects.
+            MCPTool 对象列表。
         """
         servers = self.get_enabled_servers(agent_name)
         if not servers:
@@ -540,17 +539,17 @@ class MCPManager:
                 loop = None
 
             if self._main_loop and self._main_loop.is_running():
-                # Use the dedicated background loop
+                # 使用专用的后台循环
                 from concurrent.futures import Future
                 def _run():
                     return asyncio.run_coroutine_threadsafe(_gather_tools(), self._main_loop).result(timeout=60)
-                
+
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     return executor.submit(_run).result()
-            
+
             if loop and loop.is_running():
-                # We're in an async context, create a new task in a separate thread
+                # 我们在异步上下文中，在单独的线程中创建一个新任务
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(asyncio.run, _gather_tools())
@@ -558,17 +557,17 @@ class MCPManager:
             else:
                 return asyncio.run(_gather_tools())
         except Exception as e:
-            logger.warning(f"Failed to get tools for {agent_name}: {e}")
+            logger.warning(f"获取 {agent_name} 的工具失败: {e}")
             return []
 
     def _load_config(self) -> Dict[str, Any]:
-        """Load MCP configuration from YAML file.
+        """从 YAML 文件加载 MCP 配置。
 
         Returns:
-            Configuration dictionary.
+            配置字典。
         """
         if not self.config_path.exists():
-            logger.warning(f"MCP config not found: {self.config_path}")
+            logger.warning(f"未找到 MCP 配置: {self.config_path}")
             return {"servers": {}, "defaults": []}
 
         try:
@@ -576,17 +575,17 @@ class MCPManager:
             config = yaml.safe_load(content)
             return self._expand_env_vars(config)
         except yaml.YAMLError as e:
-            logger.error(f"Failed to parse MCP config: {e}")
+            logger.error(f"解析 MCP 配置失败: {e}")
             return {"servers": {}, "defaults": []}
 
     def _expand_env_vars(self, obj: Any) -> Any:
-        """Recursively expand environment variables in config.
+        """递归展开配置中的环境变量。
 
         Args:
-            obj: Configuration object.
+            obj: 配置对象。
 
         Returns:
-            Object with environment variables expanded.
+            环境变量已展开的对象。
         """
         if isinstance(obj, dict):
             return {k: self._expand_env_vars(v) for k, v in obj.items()}
@@ -601,15 +600,15 @@ class MCPManager:
         return obj
 
 
-# Singleton instance
+# 单例实例
 _default_manager: Optional[MCPManager] = None
 
 
 def get_mcp_manager() -> MCPManager:
-    """Get the default MCPManager singleton.
+    """获取默认的 MCPManager 单例。
 
     Returns:
-        MCPManager instance.
+        MCPManager 实例。
     """
     global _default_manager
     if _default_manager is None:
@@ -618,19 +617,19 @@ def get_mcp_manager() -> MCPManager:
 
 
 def reset_mcp_manager() -> None:
-    """Reset the MCPManager singleton.
-    
-    Useful for testing or when reconfiguration is needed.
+    """重置 MCPManager 单例。
+
+    用于测试或需要重新配置时。
     """
     global _default_manager
     if _default_manager is not None:
-        # Try to cleanup connections
+        # 尝试清理连接
         try:
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 loop = None
-                
+
             if loop and not loop.is_running():
                 loop.run_until_complete(_default_manager.close_all())
             elif not loop:

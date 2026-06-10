@@ -31,7 +31,7 @@ class WorkflowManager:
         # 创建agent字典
         agents = {}
 
-        # Create agent 工厂￥没有工程每次创建都要写一大堆参数，工厂模式帮我们封装了这个过程
+        # 通过工厂创建agent：没有工厂每次创建都要写一大堆参数，工厂模式帮我们封装了这个过程
         #然后只需要说"给我一个 hypothesis_agent"，工厂就帮你造好了：
         agent_factory = AgentFactory(
             language_model_manager=self.lm_manager,
@@ -73,7 +73,7 @@ class WorkflowManager:
                 return refiner_node(cast(State, state), agent, name)
             return action
         '''add_node需要三个参数，graph调用的时候只会注入state，所以我们用闭包把agent和name绑在一起'''
-        # Add nodes
+        # 添加节点
         # _wrap_agent_node(self.agents["hypothesis_agent"], "hypothesis_agent")返回一个action函数，state在运行的时候会注入
         self.workflow.add_node("Hypothesis", _wrap_agent_node(self.agents["hypothesis_agent"], "hypothesis_agent"))
         self.workflow.add_node("Process", _wrap_agent_node(self.agents["process_agent"], "process_agent"))
@@ -87,7 +87,7 @@ class WorkflowManager:
         self.workflow.add_node("HumanReview", human_review_node)
         self.workflow.add_node("Refiner", _wrap_refiner(self.agents["refiner_agent"], "refiner_agent"))
 
-        # Add 边
+        # 添加边
         self.workflow.add_edge(START, "Hypothesis")
         self.workflow.add_edge("Hypothesis", "HumanChoice")
         #先进规划假设，再进人工选择
@@ -147,7 +147,7 @@ class WorkflowManager:
             }
         )
         #state也会是True或者False，如果没有值就去右边取，反正就是防止报错
-        # Compile workflow
+        # 编译工作流
         #langgraph提供的检查点，每执行完一个节点都会把当前的state存一份
         #可以断点回复，支持循环
         self.memory = MemorySaver()

@@ -211,25 +211,35 @@ class BaseAgent(ABC):
         tool_names = ", ".join([tool.name for tool in tools])
         team_members_str = ", ".join(team_members)
 
-        # Check if role_prompt contains a complete system prompt
+        # 统一的停止指令，追加到所有 Agent 的系统提示中
+        STOP_INSTRUCTION = (
+            "\n\n【关键指令】当你已经收集到足够的信息并完成任务后，"
+            "必须直接输出最终答案的纯文本，不要再调用任何工具。"
+            "不要用相同的参数反复调用同一个工具。"
+            "对于数据采集任务，调用工具 2-3 次就足够了。"
+        )
+
+        # 检查 role_prompt 是否包含完整的系统提示
         if role_prompt.startswith(self.SYSTEM_PROMPT_PREFIX):
-            # Use the complete system prompt directly (remove the prefix)
-            system_prompt = role_prompt[len(self.SYSTEM_PROMPT_PREFIX):]
+            # 直接使用完整的系统提示（去掉前缀）+ 停止指令
+            system_prompt = role_prompt[len(self.SYSTEM_PROMPT_PREFIX):] + STOP_INSTRUCTION
         else:
-            # Use the existing system prompt composition logic
+            # 使用系统提示组合逻辑
             system_prompt = (
-                "You are a specialized AI assistant in a data analysis team. "
-                "Your role is to complete specific tasks in the research process. "
-                "Use the provided tools to make progress on your task. "
-                "If you can't fully complete a task, explain what you've done and what's needed next. "
-                "Always aim for accurate and clear outputs. "
-                f"You have access to the following tools: {tool_names}. "
-                f"Your specific role: {role_prompt}\n"
-                "Work autonomously according to your specialty, using the tools available to you. "
-                "Do not ask for clarification. "
-                "Your other team members (and other teams) will collaborate with you based on their specialties. "
-                f"You are chosen for a reason! You are {self.agent_name} of the following team members: {team_members_str}.\n"
-                "Use the ListDirectoryContents tool to check for updates in the directory contents when needed."
+                "你是数据分析团队中的一名专业 AI 助手。"
+                "你的职责是完成研究流程中的特定任务。"
+                "使用提供的工具来推进你的任务。"
+                "如果你无法完全完成任务，请说明你已完成的工作以及下一步需要做什么。"
+                "始终追求准确和清晰的输出。"
+                f"你可以使用以下工具：{tool_names}。"
+                f"你的具体角色：{role_prompt}\n"
+                "根据你的专长自主工作，使用你可用的工具。"
+                "不要请求澄清。"
+                f"你的其他团队成员将根据各自的专长与你协作。"
+                f"你被选中是有原因的！你是团队中的 {self.agent_name}，团队成员包括：{team_members_str}。\n"
+                "需要时使用 ListDirectoryContents 工具检查目录内容的更新。\n"
+                "【重要】当你已经获得足够信息完成任务时，直接输出最终答案的纯文本，不要继续调用工具。"
+                "绝不用相同参数重复调用同一工具。"
             )
 
         # Create agent

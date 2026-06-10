@@ -6,8 +6,8 @@ from .base import BaseProvider
 
 
 class AzureChatOpenAIProvider(BaseProvider):
-    """Provider for Azure OpenAI models."""
+    """Azure OpenAI 模型的服务提供者。"""
 
     def get_model_class(self) -> Type:
-        """Returns the AzureChatOpenAI class."""
+        """返回 AzureChatOpenAI 类。"""
         return AzureChatOpenAI

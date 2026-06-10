@@ -3,62 +3,62 @@ agents:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   process_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   visualization_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   code_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 20
+    max_iterations: 30
   search_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   report_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   quality_review_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   note_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30
   refiner_agent:
     provider: deepseek
     model_config:
       model: deepseek-chat
-      temperature: 1.0
+      temperature: 0.3
       base_url: https://api.deepseek.com
-    max_iterations: 15
+    max_iterations: 30

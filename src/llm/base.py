@@ -3,14 +3,14 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 class BaseProvider(ABC):
-    """An abstract base class for LLM providers."""
+    """LLM 提供商的抽象基类。"""
 
     @abstractmethod
     def get_model_class(self) -> type[Any]:
         """
-        Gets the model class for the provider.
+        获取该提供商的模型类。
 
         Returns:
-            The class of the language model (e.g., ChatOpenAI).
+            语言模型的类（例如 ChatOpenAI）。
         """
         pass

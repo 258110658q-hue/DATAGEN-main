@@ -12,16 +12,16 @@ if TYPE_CHECKING:
     from ..core.state import State
 
 class CodeAgent(BaseAgent):
-    """Agent responsible for writing and executing Python code for data processing."""
+    """负责编写和执行 Python 代码以进行数据处理的 Agent。"""
 
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
-        Initialize the CodeAgent.
+        初始化 CodeAgent。
 
         Args:
-            language_model_manager: Manager for language model configuration.
-            team_members: List of team member roles for collaboration.
-            working_directory: The directory where the agent's data will be stored.
+            language_model_manager: 语言模型配置管理器。
+            team_members: 协作团队角色列表。
+            working_directory: Agent 数据将存储的目录。
         """
         super().__init__(
             agent_name="code_agent",
@@ -32,18 +32,18 @@ class CodeAgent(BaseAgent):
         self.response_format = ArtifactSchema
 
     def _get_tools(self) -> List:
-        """Get the list of tools for code generation and execution."""
+        """获取用于代码生成和执行的工具列表。"""
         return [read_document, execute_code, execute_command, list_directory]
 
     def get_state_updates(self, state: "State", output: Any) -> Dict[str, Any]:
-        """Return state updates for code artifacts.
-        
+        """返回代码产物的状态更新。
+
         Args:
-            state: The current workflow state.
-            output: The agent's ArtifactSchema output or a dict.
-            
+            state: 当前工作流状态。
+            output: Agent 的 ArtifactSchema 输出或字典。
+
         Returns:
-            Dict with 'code_artifacts' field update.
+            包含 'code_artifacts' 字段更新的字典。
         """
         def safe_get(obj, key, default=None):
             if isinstance(obj, dict):
@@ -51,8 +51,7 @@ class CodeAgent(BaseAgent):
             return getattr(obj, key, default)
 
         current = get_state_attr(state, "code_artifacts", {})
-        # If output contains 'artifacts' key/attr, use it, otherwise use the whole output
+        # 如果输出包含 'artifacts' 键/属性，则使用它，否则使用整个输出
         new_data = safe_get(output, "artifacts", output)
-        
-        return {"code_artifacts": update_artifact_dict(current, new_data)}
 
+        return {"code_artifacts": update_artifact_dict(current, new_data)}

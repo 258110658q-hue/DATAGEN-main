@@ -2,10 +2,10 @@ import logging
 import sys
 
 class SilenceFilter(logging.Filter):
-    """Filter out noisy messages that we don't want to see in the console."""
+    """过滤掉不需要在控制台中显示的噪音消息。"""
     def filter(self, record):
         msg = record.getMessage()
-        # Blacklist of noisy substrings
+        # 噪音子串黑名单
         blacklist = [
             "asynchronous generator",
             "cancel scope",
@@ -22,40 +22,40 @@ class SilenceFilter(logging.Filter):
         ]
         return not any(term in msg for term in blacklist)
 
-# Configure logging
+# 配置日志
 def setup_logger(log_file:str='agent.log'):
-    # Clear root logger handlers to prevent duplicates from other modules
+    # 清除根 logger 的所有 handler，防止其他模块产生重复日志
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     root_logger.setLevel(logging.WARNING)
 
-    logger = logging.getLogger("src") # Use a top-level name
+    logger = logging.getLogger("src") # 使用顶层名称
     logger.setLevel(logging.DEBUG)
-    logger.propagate = False # Prevent double logging
+    logger.propagate = False # 防止重复输出日志
 
     if logger.hasHandlers():
         logger.handlers.clear()
 
-    # Formatter
+    # 格式化器
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # File handler (Keep everything for debugging)
+    # 文件 handler（保留所有日志用于调试）
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
-    # Console handler (Filtered progress)
+    # 控制台 handler（过滤后的进度信息）
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
 
-    # Add handlers
+    # 添加 handler
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
-    
-    # Force global suppression again to be sure
+
+    # 再次强制全局抑制，确保生效
     for name in ["asyncio", "anyio", "httpx", "httpcore", "langchain", "langgraph"]:
         logging.getLogger(name).setLevel(logging.CRITICAL)
-    
+
     return logger

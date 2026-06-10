@@ -25,20 +25,26 @@ class MultiAgentSystem:
         #获取这个图就是我们在WorkflowManager中定义的所有节点和边的集合。
         #使用工厂函数实现统一的状态初始化
         initial_state = create_initial_state(user_input)
-        
+
         events = graph.stream(
             initial_state,
             {"configurable": {"thread_id": "1"}, "recursion_limit": 3000},
             stream_mode="values",
             debug=False
         )
-        
+
         for event in events:
             message = event["messages"][-1]
             if isinstance(message, tuple):
                 print(message, end='', flush=True)
             else:
-                message.pretty_print()
+                try:
+                    message.pretty_print()
+                except UnicodeEncodeError:
+                    # 回退方案：去除 Windows GBK 编码无法处理的特殊字符
+                    safe_text = str(message.content) if hasattr(message, 'content') else str(message)
+                    safe_text = safe_text.encode('gbk', errors='replace').decode('gbk')
+                    print(safe_text)
             #如果是元组，就打印，是basemessage就让输出更好看
 if __name__ == "__main__":
     system = MultiAgentSystem()

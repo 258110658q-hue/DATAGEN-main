@@ -6,7 +6,7 @@ from .base import BaseProvider
 
 
 class DeepSeekProvider(BaseProvider):
-    """Provider for DeepSeek models (OpenAI-compatible API)."""
+    """DeepSeek 模型提供者（兼容 OpenAI API）。"""
 
     def get_model_class(self) -> Type:
         return ChatOpenAI

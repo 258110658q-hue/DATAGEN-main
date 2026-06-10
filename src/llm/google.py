@@ -3,8 +3,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from .base import BaseProvider
 
 class GoogleProvider(BaseProvider):
-    """Provider for Google models."""
+    """Google 模型提供商。"""
 
     def get_model_class(self) -> Type:
-        """Returns the ChatGoogleGenerativeAI class."""
+        """返回 ChatGoogleGenerativeAI 类。"""
         return ChatGoogleGenerativeAI

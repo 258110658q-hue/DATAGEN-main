@@ -12,7 +12,7 @@ from langchain_community.agent_toolkits.load_tools import load_tools
 
 logger = setup_logger()
 
-# Initialize complex tools
+# 初始化复杂工具
 try:
     api_wrapper = WikipediaAPIWrapper(wiki_client=None)
     wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)
@@ -28,7 +28,7 @@ except Exception as e:
     arxiv = None
 
 class ToolFactory:
-    """Factory for creating and retrieving tool instances by name."""
+    """按名称创建和检索工具实例的工厂类。"""
 
     _registry = {
         "execute_code": execute_code,
@@ -46,13 +46,13 @@ class ToolFactory:
 
     @classmethod
     def get_tool(cls, tool_name: str) -> Optional[BaseTool]:
-        """Get a tool instance by name.
+        """按名称获取工具实例。
 
         Args:
-            tool_name: The name of the tool to retrieve.
+            tool_name: 要检索的工具名称。
 
         Returns:
-            The tool instance or None if not found.
+            工具实例，如果未找到则返回 None。
         """
         tool = cls._registry.get(tool_name)
         if not tool:
@@ -62,13 +62,13 @@ class ToolFactory:
 
     @classmethod
     def get_tools(cls, tool_names: List[str]) -> List[BaseTool]:
-        """Get a list of tool instances by names.
+        """按名称列表获取工具实例。
 
         Args:
-            tool_names: List of tool names to retrieve.
+            tool_names: 要检索的工具名称列表。
 
         Returns:
-            List of tool instances. Logs warning for any missing tools.
+            工具实例列表。对于缺失的工具会记录警告日志。
         """
         tools = []
         for name in tool_names:
@@ -79,25 +79,25 @@ class ToolFactory:
 
     @classmethod
     def list_available_tools(cls) -> List[str]:
-        """List all available tool names in the registry."""
+        """列出注册表中所有可用的工具名称。"""
         return list(cls._registry.keys())
 
     @classmethod
     def get_config(cls) -> Dict[str, Any]:
-        """Get current tool configuration.
-        
+        """获取当前工具配置。
+
         Returns:
-            Dictionary with all tool limits and settings.
+            包含所有工具限制和设置的字典。
         """
         from .tool_config import TOOL_CONFIG
         return TOOL_CONFIG.to_dict()
 
     @classmethod
     def get_limits(cls) -> Dict[str, Any]:
-        """Get current execution and file operation limits.
-        
+        """获取当前执行和文件操作的限制。
+
         Returns:
-            Dictionary with timeout, memory, and file size limits.
+            包含超时、内存和文件大小限制的字典。
         """
         from .tool_config import TOOL_CONFIG
         return {
@@ -120,29 +120,28 @@ class ToolFactory:
     async def get_mcp_tools_async(
         cls, server_names: List[str]
     ) -> List[BaseTool]:
-        """Get LangChain tools from MCP servers asynchronously.
+        """从MCP服务器异步获取LangChain工具。
 
         Args:
-            server_names: List of MCP server names to get tools from.
+            server_names: 要获取工具的MCP服务器名称列表。
 
         Returns:
-            List of LangChain tool instances from MCP servers.
+            来自MCP服务器的LangChain工具实例列表。
         """
         from .mcp_tools import get_mcp_tools_async
         return await get_mcp_tools_async(server_names)
 
     @classmethod
     def get_mcp_tools(cls, server_names: List[str]) -> List[BaseTool]:
-        """Get LangChain tools from MCP servers synchronously.
+        """从MCP服务器同步获取LangChain工具。
 
-        This is a convenience wrapper for sync contexts.
+        这是同步上下文的便捷包装方法。
 
         Args:
-            server_names: List of MCP server names to get tools from.
+            server_names: 要获取工具的MCP服务器名称列表。
 
         Returns:
-            List of LangChain tool instances from MCP servers.
+            来自MCP服务器的LangChain工具实例列表。
         """
         from .mcp_tools import get_mcp_tools_sync
         return get_mcp_tools_sync(server_names)
-

@@ -17,14 +17,14 @@ class ProcessRouteSchema(BaseModel):
 
     """
     next_workflow_step: Literal["FINISH", "Visualization", "Search", "Coder", "Report"] = Field(
-        description="The next role to act"
+        description="即将执行的下一角色"
     )
     current_instruction: str = Field(
-        description="The detailed instruction for the next agent"
+        description="下一智能体的详细指令"
     )
     todo_list: List[str] = Field(
         default_factory=list,
-        description="Current list of pending tasks for the project"
+        description="项目当前待办任务清单"
     )
     
 class ProcessAgent(BaseAgent):

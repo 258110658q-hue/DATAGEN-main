@@ -3,8 +3,8 @@ from langchain_anthropic import ChatAnthropic
 from .base import BaseProvider
 
 class AnthropicProvider(BaseProvider):
-    """Provider for Anthropic models."""
+    """Anthropic 模型的 Provider。"""
 
     def get_model_class(self) -> Type:
-        """Returns the ChatAnthropic class."""
+        """返回 ChatAnthropic 类。"""
         return ChatAnthropic

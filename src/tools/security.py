@@ -51,10 +51,10 @@ class SecurityScanner:
 
     @classmethod
     def _get_blocked_pattern(cls) -> re.Pattern:
-        """Get or create compiled regex for blocked patterns."""
+        """获取或创建预编译的拦截模式正则表达式。"""
         if cls._compiled_pattern is None:
             patterns = TOOL_CONFIG.execution.blocked_patterns
-            # Escape special regex chars and join with |
+            # 转义特殊正则字符，并用 | 拼接
             escaped = [re.escape(p) for p in patterns]
             cls._compiled_pattern = re.compile('|'.join(escaped))
         return cls._compiled_pattern
@@ -62,30 +62,30 @@ class SecurityScanner:
     @classmethod
     def scan_code(cls, code: str) -> ScanResult:
         """扫描代码以排查安全漏洞。
-        
+
         Args:
-            code: Python source code to scan.
-            
+            code: 要扫描的 Python 源代码。
+
         Returns:
            包含安全状态以及所有违规项、警告信息的扫描结果。
         """
         violations = []
         warnings = []
 
-        # Pattern-based detection (fast, using pre-compiled regex)
+        # 基于模式的检测（快速，使用预编译正则表达式）
         pattern = cls._get_blocked_pattern()
         matches = pattern.findall(code)
         for match in matches:
             violations.append(f"Blocked pattern detected: '{match}'")
 
-        # AST-based detection (more accurate, catches actual usage)
+        # 基于 AST 的检测（更精确，能捕获实际调用）
         try:
             tree = ast.parse(code)
             ast_violations, ast_warnings = cls._analyze_ast(tree)
             violations.extend(ast_violations)
             warnings.extend(ast_warnings)
         except SyntaxError as e:
-            # Don't block on syntax errors - let runtime handle them
+            # 不因语法错误而阻断——留待运行时处理
             warnings.append(f"Syntax error during scan: {e}")
 
         return ScanResult(
@@ -96,25 +96,25 @@ class SecurityScanner:
 
     @classmethod
     def _analyze_ast(cls, tree: ast.AST) -> tuple:
-        """Analyze AST for dangerous patterns (single-pass).
-        
+        """分析 AST 以检测危险代码模式（单次遍历）。
+
         Args:
-            tree: Parsed AST tree.
-            
+            tree: 已解析的 AST 树。
+
         Returns:
-            Tuple of (violations, warnings).
+            (violations, warnings) 元组。
         """
         violations = []
         warnings = []
 
         for node in ast.walk(tree):
-            # Check for dangerous builtins
+            # 检测危险内置函数调用
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                 func_name = node.func.id
                 if func_name in cls.DANGEROUS_BUILTINS:
                     violations.append(f"Dangerous builtin call: {func_name}()")
 
-            # Check for risky imports
+            # 检测高风险模块导入
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in cls.RISKY_MODULES:
@@ -124,7 +124,7 @@ class SecurityScanner:
                 if node.module and node.module.split('.')[0] in cls.RISKY_MODULES:
                     warnings.append(f"Risky module import: {node.module}")
 
-            # Check for attribute access on risky patterns
+            # 检测风险模式下的属性访问
             elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
                 if node.value.id == "os" and node.attr == "system":
                     violations.append("os.system() is blocked")
@@ -135,12 +135,12 @@ class SecurityScanner:
 
 
 def _enqueue_output(pipe, queue: Queue, stop_event: threading.Event) -> None:
-    """Read lines from pipe and put them in queue (runs in thread).
-    
+    """从管道逐行读取并放入队列（在线程中运行）。
+
     Args:
-        pipe: stdout or stderr pipe from subprocess.
-        queue: Queue to put lines into.
-        stop_event: Event to signal thread to stop.
+        pipe: 来自 subprocess 的 stdout 或 stderr 管道。
+        queue: 用于存放输出行的队列。
+        stop_event: 用于通知线程停止的事件。
     """
     try:
         for line in iter(pipe.readline, ''):
@@ -150,19 +150,19 @@ def _enqueue_output(pipe, queue: Queue, stop_event: threading.Event) -> None:
                 queue.put(line)
         pipe.close()
     except (ValueError, OSError):
-        # Pipe closed
+        # 管道已关闭
         pass
 
 
 class ResourceLimiter:
-    """Execute code with user-controlled resource limits.
-    
-    Supports:
-    - Fixed timeout: Kill after N seconds
-    - Progress-based timeout: Kill only if no stdout for N seconds
-    - Memory limit: Set via resource.setrlimit (Linux only)
-    
-    Uses threading for cross-platform non-blocking stdout reading.
+    """以用户可控的资源限制执行代码。
+
+    支持以下限制方式：
+    - 固定超时：运行 N 秒后强制终止
+    - 基于进度的超时：仅在 N 秒内无 stdout 输出时终止
+    - 内存限制：通过 resource.setrlimit 设置（仅 Linux）
+
+    使用多线程实现跨平台的非阻塞 stdout 读取。
     """
 
     def __init__(
@@ -172,13 +172,13 @@ class ResourceLimiter:
         max_output_chars: Optional[int] = None,
         progress_timeout: Optional[int] = None,
     ):
-        """Initialize resource limiter.
-        
+        """初始化资源限制器。
+
         Args:
-            timeout: Fixed timeout in seconds. None = no limit.
-            memory_mb: Memory limit in MB (Linux only). None = no limit.
-            max_output_chars: Truncate output if exceeds. None = use config default.
-            progress_timeout: Timeout only if no stdout for N seconds.
+            timeout: 固定超时时间（秒）。None 表示无限制。
+            memory_mb: 内存限制（MB，仅 Linux）。None 表示无限制。
+            max_output_chars: 超出时截断输出。None 表示使用配置默认值。
+            progress_timeout: 仅在 N 秒内无 stdout 输出时触发超时。
         """
         self.timeout = timeout
         self.memory_mb = memory_mb
@@ -192,26 +192,26 @@ class ResourceLimiter:
         shell: bool = False,
         executable: Optional[str] = None,
     ) -> subprocess.CompletedProcess:
-        """Execute command with resource limits.
-        
+        """以资源限制执行命令。
+
         Args:
-            command: Command to execute (list or string if shell=True).
-            cwd: Working directory.
-            shell: Whether to use shell execution.
-            executable: Shell executable (e.g., /bin/bash).
-            
+            command: 要执行的命令（列表，若 shell=True 则可传字符串）。
+            cwd: 工作目录。
+            shell: 是否使用 shell 执行。
+            executable: Shell 可执行文件路径（如 /bin/bash）。
+
         Returns:
-            CompletedProcess with stdout/stderr.
-            
+            包含 stdout/stderr 的 CompletedProcess。
+
         Raises:
-            TimeoutError: If execution exceeds timeout limits.
+            TimeoutError: 当执行时间超出超时限制时抛出。
         """
-        # Apply memory limit if specified (Linux only)
+        # 如果指定了内存限制，则应用（仅 Linux）
         preexec_fn = None
         if self.memory_mb is not None:
             preexec_fn = self._create_preexec_fn()
 
-        # No timeout - run directly
+        # 无超时设置——直接运行
         if self.timeout is None and self.progress_timeout is None:
             result = subprocess.run(
                 command,
@@ -224,7 +224,7 @@ class ResourceLimiter:
             )
             return self._truncate_output(result)
 
-        # Use Popen with threading for cross-platform timeout monitoring
+        # 使用 Popen 加多线程实现跨平台的超时监控
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -236,7 +236,7 @@ class ResourceLimiter:
             preexec_fn=preexec_fn,
         )
 
-        # Set up threaded output reading
+        # 设置多线程输出读取
         stdout_queue: Queue = Queue()
         stderr_queue: Queue = Queue()
         stop_event = threading.Event()
@@ -264,10 +264,10 @@ class ResourceLimiter:
                 elapsed = time.time() - start_time
                 idle_time = time.time() - last_output_time
 
-                # Check if process finished
+                # 检查进程是否已结束
                 return_code = process.poll()
                 if return_code is not None:
-                    # Process completed - drain remaining output
+                    # 进程已完成——排空剩余输出
                     stop_event.set()
                     stdout_thread.join(timeout=1.0)
                     stderr_thread.join(timeout=1.0)
@@ -284,7 +284,7 @@ class ResourceLimiter:
                             break
                     break
 
-                # Read available output from queue
+                # 从队列读取可用输出
                 try:
                     line = stdout_queue.get(timeout=DEFAULT_POLL_INTERVAL_SECONDS)
                     stdout_lines.append(line)
@@ -292,14 +292,14 @@ class ResourceLimiter:
                 except Empty:
                     pass
 
-                # Drain stderr without blocking
+                # 非阻塞式排空 stderr
                 while not stderr_queue.empty():
                     try:
                         stderr_lines.append(stderr_queue.get_nowait())
                     except Empty:
                         break
 
-                # Timeout logic
+                # 超时判断逻辑
                 if self.progress_timeout is not None:
                     if idle_time > self.progress_timeout:
                         process.kill()
@@ -330,24 +330,24 @@ class ResourceLimiter:
         return self._truncate_output(result)
 
     def _create_preexec_fn(self):
-        """Create preexec function for memory limiting (Linux only)."""
+        """创建用于内存限制的 preexec 函数（仅 Linux）。"""
         memory_mb = self.memory_mb
-        
+
         def set_limits():
             try:
                 import resource
                 memory_bytes = memory_mb * 1024 * 1024
                 resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
             except (ImportError, ValueError, OSError):
-                pass  # Not available on this platform
-        
+                pass  # 当前平台不可用
+
         return set_limits
 
     def _truncate_output(
-        self, 
+        self,
         result: subprocess.CompletedProcess
     ) -> subprocess.CompletedProcess:
-        """Truncate output if it exceeds max_output_chars."""
+        """若输出超过 max_output_chars 则截断。"""
         if self.max_output_chars and len(result.stdout) > self.max_output_chars:
             result.stdout = (
                 result.stdout[:self.max_output_chars] +

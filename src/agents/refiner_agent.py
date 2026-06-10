@@ -15,16 +15,16 @@ if TYPE_CHECKING:
     from ..core.language_models import LanguageModelManager
 
 class RefinerAgent(BaseAgent):
-    """Agent responsible for optimizing and enhancing research reports."""
+    """负责优化和增强研究报告的Agent。"""
 
     def __init__(self, language_model_manager: "LanguageModelManager", team_members: List[str], working_directory: str = WORKING_DIRECTORY):
         """
-        Initialize the RefinerAgent.
+        初始化RefinerAgent。
 
         Args:
-            language_model_manager: Manager for language model configuration.
-            team_members: List of team member roles for collaboration.
-            working_directory: The directory where the agent's data will be stored.
+            language_model_manager: 语言模型配置管理器。
+            team_members: 协作团队的成员角色列表。
+            working_directory: Agent数据存储目录。
         """
         super().__init__(
             agent_name="refiner_agent",
@@ -35,7 +35,7 @@ class RefinerAgent(BaseAgent):
         self.response_format = ArtifactSchema
 
     def _get_tools(self) -> List:
-        """Get the list of tools for report refinement."""
+        """获取用于报告优化的工具列表。"""
         api_wrapper = WikipediaAPIWrapper(wiki_client=None)
         wikipedia = WikipediaQueryRun(api_wrapper=api_wrapper)
         base_tools = [

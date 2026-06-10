@@ -6,8 +6,8 @@ from .base import BaseProvider
 
 
 class OpenAIProvider(BaseProvider):
-    """Provider for OpenAI models."""
+    """OpenAI 模型提供器。"""
 
     def get_model_class(self) -> Type:
-        """Returns the ChatOpenAI class."""
+        """返回 ChatOpenAI 类。"""
         return ChatOpenAI
