@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m py_compile frontend/streamlit_app.py)",
+      "PowerShell(python -m py_compile src/tools/FileEdit.py)",
+      "PowerShell(python -c \"import streamlit, matplotlib, seaborn, sklearn, statsmodels, openpyxl, yaml; print\\('streamlit:', streamlit.__version__\\); print\\('matplotlib:', matplotlib.__version__\\); print\\('seaborn:', seaborn.__version__\\); print\\('sklearn:', sklearn.__version__\\); print\\('statsmodels:', statsmodels.__version__\\); print\\('openpyxl:', openpyxl.__version__\\); print\\('yaml: ok'\\)\")",
+      "PowerShell(python -m py_compile src/tools/basetool.py)",
+      "PowerShell(git add .gitignore requirements.txt packages.txt app.py config/agents/hypothesis_agent/AGENT.md frontend/streamlit_app.py src/tools/FileEdit.py src/tools/basetool.py docs/DEPLOY_GUIDE.md docs/USE_CASES.md data/OnlineSalesData.csv .claude/)"
+    ]
+  }
+}

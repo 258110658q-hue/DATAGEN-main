@@ -1,0 +1,2 @@
+# Linux 系统依赖（Hugging Face Spaces 会在 pip install 之前用 apt-get 安装）
+fonts-wqy-microhei

@@ -1,9 +1,20 @@
 .env
 *.log
-data/
-*__pycache__/
+__pycache__/
+.venv/
 chromedriver/
 .roomodes
+
+# 运行时生成的文件（不提交）
+data/*.png
+data/*.md
+data/*.py
+data/*.txt
+data/run_*/
+data/charts/
+
+# 保留示例数据文件
+!data/OnlineSalesData.csv
 
 # Local configurations
 config_local/

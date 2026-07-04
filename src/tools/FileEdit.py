@@ -56,17 +56,32 @@ def normalize_path(file_path: str) -> str:
 
 @tool
 def collect_data(
-    data_path: Annotated[str, "Path to the CSV file (required, e.g. 'data.csv' or 'OnlineSalesData.csv')"],
+    data_path: Annotated[str, "Path to the data file (CSV or Excel, e.g. 'data.csv' or 'sales.xlsx')"],
     nrows: Annotated[int | None, "Number of rows to read"] = None,
     usecols: Annotated[list[str] | None, "List of column names to read"] = None,
     skiprows: Annotated[int | None, "Number of rows to skip at the beginning"] = None
-) -> Annotated[pd.DataFrame, "The collected data from the CSV file"]:
+) -> Annotated[pd.DataFrame, "The collected data from the file"]:
     """
-    从 CSV 文件中收集数据，支持选择性读取选项。
+    从 CSV 或 Excel 文件中收集数据，支持选择性读取选项。
+    会根据文件扩展名自动选择读取方式：.csv 用 read_csv，.xlsx/.xls 用 read_excel。
     """
     data_path = normalize_path(data_path)
+    ext = os.path.splitext(data_path)[1].lower()
+
+    if ext in ('.xlsx', '.xls'):
+        # ── Excel 读取 ──
+        logger.info(f"Attempting to read Excel file: {data_path}")
+        try:
+            data = pd.read_excel(data_path, nrows=nrows, usecols=usecols, skiprows=skiprows)
+            logger.info("Successfully read Excel file")
+            return data
+        except Exception as e:
+            logger.error(f"Failed to read Excel file: {e}")
+            raise ValueError(f"Unable to read Excel file: {e}")
+
+    # ── CSV 读取（尝试多种编码） ──
     logger.info(f"Attempting to read CSV file: {data_path}")
-    encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252']
+    encodings = ['utf-8', 'latin1', 'iso-8859-1', 'cp1252', 'gbk']
     for encoding in encodings:
         try:
             data = pd.read_csv(

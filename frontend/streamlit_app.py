@@ -65,16 +65,33 @@ st.caption("基于 LangGraph 的 9 Agent 协作系统 | 模型: DeepSeek-Chat")
 
 # 侧边栏
 with st.sidebar:
-    st.header("📁 输入数据 (data/)")
+    st.header("📤 上传数据文件")
+    uploaded_file = st.file_uploader(
+        "支持 CSV 或 Excel 文件",
+        type=["csv", "xlsx", "xls"],
+        help="上传后文件会保存在 data/ 目录中，可直接用于分析"
+    )
+
     data_dir = os.path.join(PROJECT_ROOT, "data")
-    csv_files = []
+    if uploaded_file is not None:
+        save_path = os.path.join(data_dir, uploaded_file.name)
+        with open(save_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"已上传: {uploaded_file.name}")
+        st.rerun()
+
+    st.header("📁 可用数据文件 (data/)")
+    data_files = []  # 存储所有支持的文件（CSV + Excel）
     if os.path.exists(data_dir):
         for f in sorted(os.listdir(data_dir)):
             fp = os.path.join(data_dir, f)
             if os.path.isfile(fp) and not f.startswith("."):
-                if f.endswith(".csv"):
-                    csv_files.append(f)
-                st.text(f"• {f}  ({os.path.getsize(fp)/1024:.1f} KB)")
+                if f.endswith((".csv", ".xlsx", ".xls")):
+                    data_files.append(f)
+                    icon = "📊" if f.endswith(".xlsx") or f.endswith(".xls") else "📄"
+                    st.text(f"{icon} {f}  ({os.path.getsize(fp)/1024:.1f} KB)")
+    if not data_files:
+        st.text("（暂无文件，请上传或放入 data/ 目录）")
 
     st.divider()
     st.header("📂 历史运行记录")
@@ -127,8 +144,8 @@ if run_button:
         run_dir = os.path.join(data_dir, f"run_{timestamp}")
         os.makedirs(run_dir, exist_ok=True)
 
-        # 复制输入 CSV 到运行目录（两个位置，兼容 Agent 的不同路径写法）
-        for cf in csv_files:
+        # 复制输入的 CSV/Excel 到运行目录（两个位置，兼容 Agent 的不同路径写法）
+        for cf in data_files:
             shutil.copy2(os.path.join(data_dir, cf), os.path.join(run_dir, cf))
             # 同时在 run_dir/data/ 下创建副本，兼容 Agent 使用 data/xxx.csv 路径
             run_data_subdir = os.path.join(run_dir, "data")
@@ -196,7 +213,9 @@ if run_button:
             # 生成的文件
             st.subheader(f"📁 本次输出: `{run_dir_path}`")
             if os.path.exists(run_dir_path):
-                all_files = [f for f in os.listdir(run_dir_path) if not f.endswith(".csv")]
+                INPUT_EXT = {'.csv', '.xlsx', '.xls'}
+                all_files = [f for f in os.listdir(run_dir_path)
+                           if os.path.splitext(f)[1].lower() not in INPUT_EXT]
                 if all_files:
                     for f in sorted(all_files):
                         fp = os.path.join(run_dir_path, f)
