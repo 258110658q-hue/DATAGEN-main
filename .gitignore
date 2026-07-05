@@ -10,10 +10,14 @@ data/*.png
 data/*.md
 data/*.py
 data/*.txt
+data/*.csv
+data/*.xlsx
+data/*.xls
 data/run_*/
 data/charts/
+data/visualizations/
 
-# 保留示例数据文件
+# 只保留原始示例数据
 !data/OnlineSalesData.csv
 
 # Local configurations
