@@ -5,5 +5,6 @@ mcp_servers: []
 skills: []
 tools:
   - execute_code
+  - collect_data
   - read_document
 rules: _shared/rules.md
