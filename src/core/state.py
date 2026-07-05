@@ -87,7 +87,13 @@ class State(BaseModel):
         default=0,
         description="连续修改尝试计数器"
     )
-    
+
+    # === 流程阶段计数器（硬约束，不靠模型） ===
+    process_phase: int = Field(
+        default=0,
+        description="0=假设完成, 1=code完成, 2=viz完成, 3=report完成, 4=可FINISH"
+    )
+
     # === Legacy Compatibility (Optional) ===
     # 必要时可使用属性或别名，但我们将按照要求执行强制中断。
 
@@ -104,5 +110,6 @@ def create_initial_state(user_input: str) -> dict[str, Any]:
         "code_artifacts": {},
         "report_artifacts": {},
         "needs_revision": False,
-        "revision_count": 0
+        "revision_count": 0,
+        "process_phase": 0,
     }

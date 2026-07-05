@@ -68,26 +68,33 @@ def QualityReview_router(state: State) -> str:
 
 def process_router(state: State) -> ProcessNodeType:
     """
-    根据状态中的流程判定进行路由.
+    根据状态中的流程判定进行路由。
+    硬约束：process_phase 强制按 Coder → Visualization → Report 顺序执行。
     """
     logger.info("Entering process_router")
-    #  检查 'next_workflow_step' 代替 'process_decision'
     next_step = get_state_attr(state, "next_workflow_step", "")
-    
+    phase = get_state_attr(state, "process_phase", 0)
+
+    # === 硬约束：phase 强制顺序 ===
+    # 0 → Coder, 1 → Visualization, 2 → Report, 3 → 允许 FINISH
+    PHASE_FORCE = {0: "Coder", 1: "Visualization", 2: "Report"}
+
     valid_decisions = {"Coder", "Search", "Visualization", "Report"}
-    #"Coder" in {"Coder", "Search", "Visualization", "Report"}   # → True
-    #"FINISH" in {"Coder", "Search", "Visualization", "Report"}   # → False
-    #next_step是一个Agent名字
+
+    if next_step == "FINISH":
+        if phase < 3:
+            forced = PHASE_FORCE[phase]
+            logger.info(f"process_agent 说 FINISH 但 phase={phase}，强制路由到 {forced}")
+            return cast(ProcessNodeType, forced)
+        return "Refiner"
+
     if next_step in valid_decisions:
         return cast(ProcessNodeType, next_step)
-    #cast 的本质就是直接返回第二个参数本身，运行时什么都不做cast(类型,值)
-    if next_step == "FINISH":
-        return "Refiner"
-    
-    #安全优化：避免管理器持续故障时出现死循环
+
+    # 安全优化：避免管理器持续故障时出现死循环
     step_count = get_state_attr(state, "step_count", 0)
     if step_count > 20:
-        logger.warning(f"Step count ({step_count}) too high with invalid decision '{next_step}'. Forcing FINISH.")
+        logger.warning(f"Step count ({step_count}) too high. Forcing FINISH.")
         return "Refiner"
 
     logger.warning(f"Invalid decision: {next_step}. Defaulting to 'Process'.")

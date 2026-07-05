@@ -163,6 +163,15 @@ def agent_node(state: State, agent: BaseAgent, name: str) -> dict[str, Any]:
                 completed.append(current_instruction)
                 updates["completed_tasks"] = completed
         #如果state里面有current_instruction，则把当前任务加入完成列表completed_tasks，方便后续监控流程进度
+
+        # 硬约束：code/viz/report 完成后推进 process_phase，确保 router 强制按序执行
+        _phase_map = {"code_agent": 1, "visualization_agent": 2, "report_agent": 3}
+        if name in _phase_map:
+            current_phase = get_state_attr(state, "process_phase", 0)
+            new_phase = max(current_phase, _phase_map[name])
+            if new_phase > current_phase:
+                updates["process_phase"] = new_phase
+
         return updates
 
     except Exception as e:
