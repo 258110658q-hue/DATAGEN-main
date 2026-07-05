@@ -57,20 +57,20 @@ class State(BaseModel):
         description="当前研究假设"
     )
     
-    search_artifacts: dict[str, str] = Field(
-        default_factory=dict, 
+    search_artifacts: dict[str, Any] = Field(
+        default_factory=dict,
         description="{文件路径: 摘要} 映射，存储搜索结果"
     )
-    data_viz_artifacts: dict[str, str] = Field(
-        default_factory=dict, 
+    data_viz_artifacts: dict[str, Any] = Field(
+        default_factory=dict,
         description="{文件路径: 摘要} 映射，存储可视化产物"
     )
-    code_artifacts: dict[str, str] = Field(
-        default_factory=dict, 
+    code_artifacts: dict[str, Any] = Field(
+        default_factory=dict,
         description="{文件路径: 摘要} 映射，存储代码文件"
     )
-    report_artifacts: dict[str, str] = Field(
-        default_factory=dict, 
+    report_artifacts: dict[str, Any] = Field(
+        default_factory=dict,
         description="{章节: 路径/内容} 映射，存储报告章节"
     )
 
