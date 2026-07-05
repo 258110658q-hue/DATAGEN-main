@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 from typing import Annotated
 import subprocess
@@ -123,7 +124,8 @@ def execute_code(
 
         # 获取平台相关的命令（使用完整路径引用脚本文件）
         # 设置 PYTHONIOENCODING=utf-8 防止脚本中的 emoji/中文在 GBK 下崩溃
-        python_cmd = f'python -X utf8 "{code_file_path}"'
+        # 使用主进程的 Python（保证能访问 venv 里装的 pandas/matplotlib 等包）
+        python_cmd = f'"{sys.executable}" -X utf8 "{code_file_path}"'
         full_command, shell, executable = get_platform_specific_command(python_cmd)
 
         logger.info(f"正在执行命令: {full_command}")
