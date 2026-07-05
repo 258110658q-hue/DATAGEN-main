@@ -103,19 +103,6 @@ def execute_code(
 
         logger.info(f"代码将写入文件: {code_file_path}")
 
-        # 注入中文字体兜底：Linux 上没有 SimHei，自动用文泉驿或 Noto Sans
-        _font_fallback = (
-            "import matplotlib\n"
-            "_existing_fonts = [f.name for f in matplotlib.font_manager.fontManager.ttflist]\n"
-            "if 'SimHei' not in _existing_fonts:\n"
-            "    for _fallback in ['WenQuanYi Micro Hei', 'Noto Sans CJK SC', 'Noto Sans SC']:\n"
-            "        if _fallback in _existing_fonts:\n"
-            "            matplotlib.rcParams['font.sans-serif'] = [_fallback, 'DejaVu Sans']\n"
-            "            break\n"
-        )
-        if any(kw in input_code for kw in ('matplotlib', 'plt.', 'seaborn')):
-            input_code = _font_fallback + "\n" + input_code
-
         # 使用 UTF-8 编码将代码写入文件
         with open(code_file_path, 'w', encoding='utf-8') as code_file:
             code_file.write(input_code)
