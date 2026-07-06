@@ -89,6 +89,17 @@ def process_router(state: State) -> ProcessNodeType:
         return "Refiner"
 
     if next_step in valid_decisions:
+        # 禁止回退：phase 已推进时，不允许退回之前的 Agent
+        if phase > 0:
+            _order = ["Coder", "Visualization", "Report"]
+            try:
+                target_idx = _order.index(next_step)
+                if target_idx < phase:
+                    forced = PHASE_FORCE[phase]
+                    logger.info(f"process_agent 说 {next_step} 但 phase={phase}（已回退），强制路由到 {forced}")
+                    return cast(ProcessNodeType, forced)
+            except ValueError:
+                pass
         return cast(ProcessNodeType, next_step)
 
     # 安全优化：避免管理器持续故障时出现死循环
